@@ -1,5 +1,6 @@
 from flask import Flask
 from sqlalchemy import inspect
+import os
 
 from config import Config
 
@@ -10,12 +11,26 @@ from .services import bootstrap_admin
 
 def create_app(config_class=Config):
     app = Flask(__name__)
+
+    # Load config
     app.config.from_object(config_class)
 
+    # ✅ FIX DATABASE URL DRIVER
+    db_url = os.getenv("DATABASE_URL")
+
+    if db_url and db_url.startswith("postgresql://"):
+        db_url = db_url.replace("postgresql://", "postgresql+psycopg://", 1)
+
+    app.config["SQLALCHEMY_DATABASE_URI"] = db_url
+
+    # Init extensions
     db.init_app(app)
     migrate.init_app(app, db)
 
+    # Import models
     from . import models
+
+    # Register blueprints
     from .admin_routes import admin_bp
     from .auth_routes import auth_bp
     from .chat_routes import chat_bp
@@ -32,18 +47,23 @@ def create_app(config_class=Config):
     app.register_blueprint(wallet_bp)
     app.register_blueprint(admin_bp)
 
+    # Load user before each request
     app.before_request(load_user_from_cookie)
 
+    # CLI command
     @app.cli.command("bootstrap-admin")
     def bootstrap_admin_command():
         bootstrap_admin()
         print("Admin account is ready.")
 
+    # Auto bootstrap admin if DB ready
     with app.app_context():
         try:
             if inspect(db.engine).has_table("users"):
                 bootstrap_admin()
         except Exception as exc:
-            app.logger.warning("Admin bootstrap skipped until database is ready: %s", exc)
+            app.logger.warning(
+                "Admin bootstrap skipped until database is ready: %s", exc
+            )
 
     return app
