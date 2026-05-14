@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Browse Tasks - ZipTask{% endblock %}
+{% block content %}
+<section class="page-section">
+    <div class="container">
+        <div class="d-flex flex-column flex-md-row justify-content-between gap-3 mb-4">
+            <div>
+                <p class="eyebrow text-purple mb-1">Local marketplace</p>
+                <h1 class="h2 fw-bold">Browse Tasks</h1>
+            </div>
+            <div class="filter-links">
+                <a class="{{ 'active' if status == 'OPEN' else '' }}" href="{{ url_for('tasks.browse', status='OPEN') }}">Open</a>
+                <a class="{{ 'active' if status == 'ASSIGNED' else '' }}" href="{{ url_for('tasks.browse', status='ASSIGNED') }}">Assigned</a>
+                <a class="{{ 'active' if status == 'COMPLETED' else '' }}" href="{{ url_for('tasks.browse', status='COMPLETED') }}">Completed</a>
+            </div>
+        </div>
+        <div class="row g-4">
+            {% for task in tasks %}
+                <div class="col-md-6 col-xl-4">
+                    <div class="task-card h-100">
+                        <div class="d-flex justify-content-between align-items-start gap-2">
+                            <h2 class="h5 fw-bold">{{ task.title }}</h2>
+                            <span class="badge status-badge">{{ task.status }}</span>
+                        </div>
+                        <p class="text-muted">{{ task.description }}</p>
+                        <div class="d-flex justify-content-between">
+                            <span>{{ task.location }}</span>
+                            <strong>₹{{ "%.2f"|format(task.budget) }}</strong>
+                        </div>
+                        {% if g.current_user and task.status == "OPEN" and task.creator_id != g.current_user.id %}
+                            <form method="post" action="{{ url_for('tasks.accept_task', task_id=task.id) }}" class="mt-3">
+                                <button class="btn gradient-btn w-100">Accept Task</button>
+                            </form>
+                        {% endif %}
+                    </div>
+                </div>
+            {% else %}
+                <div class="col-12">
+                    <div class="panel text-center">
+                        <p class="text-muted mb-0">No tasks found for this status.</p>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endblock %}

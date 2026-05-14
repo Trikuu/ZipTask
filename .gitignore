@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+.env
+.venv/
+venv/
+instance/
+.pytest_cache/
+*.sqlite3
+*.db
+pip-wheel-metadata/

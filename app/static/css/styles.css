@@ -1,0 +1,214 @@
+:root {
+    --purple: #6c2bd9;
+    --purple-dark: #42136f;
+    --pink: #ec4899;
+    --ink: #23152f;
+    --muted: #6b6474;
+    --surface: #ffffff;
+    --soft: #f8f3ff;
+}
+
+body {
+    background: linear-gradient(180deg, #fff 0%, #fff7fc 45%, #f6f0ff 100%);
+    color: var(--ink);
+    font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    min-height: 100vh;
+}
+
+.navbar {
+    background: linear-gradient(90deg, var(--purple-dark), var(--purple), var(--pink));
+    box-shadow: 0 12px 28px rgba(108, 43, 217, 0.18);
+}
+
+.text-purple,
+.navbar .text-purple {
+    color: var(--purple) !important;
+}
+
+.hero {
+    color: #fff;
+    background:
+        linear-gradient(135deg, rgba(66, 19, 111, 0.96), rgba(108, 43, 217, 0.88), rgba(236, 72, 153, 0.82)),
+        url("https://images.unsplash.com/photo-1556761175-b413da4baf72?auto=format&fit=crop&w=1600&q=80") center/cover;
+    min-height: 560px;
+    display: flex;
+    align-items: center;
+}
+
+.eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0;
+    font-weight: 800;
+    font-size: 0.78rem;
+}
+
+.hero-panel,
+.auth-card,
+.panel,
+.form-panel,
+.task-card,
+.balance-card {
+    background: rgba(255, 255, 255, 0.96);
+    border: 1px solid rgba(108, 43, 217, 0.12);
+    border-radius: 8px;
+    box-shadow: 0 18px 45px rgba(66, 19, 111, 0.12);
+}
+
+.hero-panel {
+    color: var(--ink);
+    padding: 24px;
+}
+
+.mini-task,
+.list-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 0;
+    border-bottom: 1px solid #eee6f8;
+}
+
+.mini-task:last-child,
+.list-row:last-child {
+    border-bottom: 0;
+}
+
+.mini-task span {
+    color: var(--muted);
+    display: block;
+    font-size: 0.9rem;
+}
+
+.auth-section,
+.page-section {
+    padding: 56px 0;
+}
+
+.auth-card,
+.form-panel {
+    max-width: 560px;
+    padding: 28px;
+}
+
+.panel,
+.task-card {
+    padding: 24px;
+}
+
+.gradient-btn {
+    background: linear-gradient(90deg, var(--purple), var(--pink));
+    border: 0;
+    color: #fff;
+    font-weight: 700;
+}
+
+.gradient-btn:hover,
+.gradient-btn:focus {
+    color: #fff;
+    filter: brightness(0.96);
+}
+
+.form-control,
+.form-select {
+    border-color: #dacbee;
+    border-radius: 8px;
+    padding: 0.72rem 0.85rem;
+}
+
+.form-control:focus {
+    border-color: var(--purple);
+    box-shadow: 0 0 0 0.2rem rgba(108, 43, 217, 0.14);
+}
+
+.wallet-pill,
+.balance-card {
+    background: linear-gradient(135deg, var(--purple), var(--pink));
+    color: #fff;
+    border-radius: 8px;
+    padding: 18px 22px;
+    min-width: 240px;
+}
+
+.wallet-pill span,
+.balance-card p,
+.balance-card span {
+    opacity: 0.86;
+}
+
+.wallet-pill strong {
+    display: block;
+    font-size: 1.45rem;
+}
+
+.balance-card h1 {
+    font-size: 3rem;
+    font-weight: 800;
+}
+
+.filter-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.filter-links a {
+    border: 1px solid #dccaf3;
+    border-radius: 999px;
+    color: var(--purple);
+    padding: 8px 14px;
+    text-decoration: none;
+    font-weight: 700;
+}
+
+.filter-links a.active {
+    background: var(--purple);
+    color: #fff;
+}
+
+.status-badge {
+    background: #f2e8ff;
+    color: var(--purple);
+}
+
+.task-card {
+    display: flex;
+    flex-direction: column;
+}
+
+.task-card p {
+    flex: 1;
+}
+
+.narrow {
+    max-width: 820px;
+}
+
+footer {
+    color: var(--muted);
+    background: #fff;
+    border-top: 1px solid #eee5f8;
+}
+
+footer a {
+    color: var(--purple);
+    text-decoration: none;
+    font-weight: 700;
+}
+
+@media (max-width: 767px) {
+    .hero {
+        min-height: auto;
+    }
+
+    .display-4 {
+        font-size: 2.35rem;
+    }
+
+    .auth-card,
+    .form-panel,
+    .panel,
+    .task-card {
+        padding: 20px;
+    }
+}

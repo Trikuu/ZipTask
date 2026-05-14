@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}ZipTask - Local Task Marketplace{% endblock %}
+{% block content %}
+<section class="hero">
+    <div class="container py-5">
+        <div class="row align-items-center g-4">
+            <div class="col-lg-7">
+                <p class="eyebrow mb-2">Simple INR wallet marketplace</p>
+                <h1 class="display-4 fw-bold">Post local tasks. Get them done fast.</h1>
+                <p class="lead mt-3">ZipTask lets people post small jobs with a budget, performers accept them, and completed work is paid out with a simple 95% performer and 5% platform split.</p>
+                <div class="d-flex flex-wrap gap-2 mt-4">
+                    <a href="{{ url_for('tasks.browse') }}" class="btn btn-light btn-lg text-purple">Browse Tasks</a>
+                    <a href="{{ url_for('tasks.post_task') }}" class="btn btn-outline-light btn-lg">Post a Task</a>
+                </div>
+            </div>
+            <div class="col-lg-5">
+                <div class="hero-panel">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="fw-semibold">Open Tasks</span>
+                        <span class="badge rounded-pill text-bg-light">{{ open_tasks|length }}</span>
+                    </div>
+                    {% for task in open_tasks %}
+                        <div class="mini-task">
+                            <div>
+                                <strong>{{ task.title }}</strong>
+                                <span>{{ task.location }}</span>
+                            </div>
+                            <b>₹{{ "%.2f"|format(task.budget) }}</b>
+                        </div>
+                    {% else %}
+                        <p class="mb-0 opacity-75">No open tasks yet. Be the first to post one.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Admin Panel - ZipTask{% endblock %}
+{% block content %}
+<section class="page-section">
+    <div class="container">
+        <div class="d-flex flex-column flex-md-row justify-content-between gap-3 mb-4">
+            <div>
+                <p class="eyebrow text-purple mb-1">Administration</p>
+                <h1 class="h2 fw-bold">Admin Panel</h1>
+            </div>
+            <div class="wallet-pill">
+                <span>Platform Earnings</span>
+                <strong>₹{{ "%.2f"|format(total_earnings) }}</strong>
+            </div>
+        </div>
+        <div class="row g-4">
+            <div class="col-12">
+                <div class="panel table-responsive">
+                    <h2 class="h5 fw-bold mb-3">Users</h2>
+                    <table class="table align-middle">
+                        <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Role</th><th>Balance</th></tr></thead>
+                        <tbody>
+                        {% for user in users %}
+                            <tr><td>{{ user.full_name }}</td><td>{{ user.email }}</td><td>{{ user.phone }}</td><td>{{ user.role }}</td><td>₹{{ "%.2f"|format(user.wallet.balance) }}</td></tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="col-12">
+                <div class="panel table-responsive">
+                    <h2 class="h5 fw-bold mb-3">Tasks</h2>
+                    <table class="table align-middle">
+                        <thead><tr><th>Title</th><th>Budget</th><th>Status</th><th>Creator</th><th>Performer</th></tr></thead>
+                        <tbody>
+                        {% for task in tasks %}
+                            <tr><td>{{ task.title }}</td><td>₹{{ "%.2f"|format(task.budget) }}</td><td>{{ task.status }}</td><td>{{ task.creator.email }}</td><td>{{ task.performer.email if task.performer else "-" }}</td></tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="col-12">
+                <div class="panel table-responsive">
+                    <h2 class="h5 fw-bold mb-3">Transactions</h2>
+                    <table class="table align-middle">
+                        <thead><tr><th>User</th><th>Amount</th><th>Type</th><th>Status</th><th>Reference</th></tr></thead>
+                        <tbody>
+                        {% for txn in transactions %}
+                            <tr><td>{{ txn.user.email }}</td><td>₹{{ "%.2f"|format(txn.amount) }}</td><td>{{ txn.type }}</td><td>{{ txn.status }}</td><td>{{ txn.reference or "-" }}</td></tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,11 @@
+Flask==3.0.3
+Flask-SQLAlchemy==3.1.1
+Flask-Migrate==4.0.7
+psycopg[binary]
+python-dotenv==1.0.1
+PyJWT==2.9.0
+Werkzeug==3.0.4
+razorpay==1.4.2
+gunicorn==22.0.0
+email-validator==2.2.0
+setuptools==80.9.0
