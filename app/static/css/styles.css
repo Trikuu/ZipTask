@@ -515,3 +515,7 @@ footer a {
     padding: 10px;
     border-radius: 8px;
 }
+.sidebar-bottom {
+    margin-top: auto;
+    padding-top: 20px;
+}

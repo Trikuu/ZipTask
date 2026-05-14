@@ -58,11 +58,13 @@
     </nav>
 
     <!-- 🔴 Logout fixed at bottom -->
-    <form method="post" action="{{ url_for('auth.logout') }}" class="sidebar-logout-form mt-auto js-loading-form">
+    <div class="sidebar-bottom">
+    <form method="post" action="{{ url_for('auth.logout') }}" class="js-loading-form">
         <button class="sidebar-logout w-100" type="submit">
             <i class="bi bi-box-arrow-right"></i> Logout
         </button>
     </form>
+</div>
 </aside>
 {% else %}
 <header class="public-header">
