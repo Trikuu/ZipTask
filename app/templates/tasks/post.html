@@ -5,7 +5,7 @@
     <div class="container">
         <div class="form-panel mx-auto">
             <h1 class="h3 fw-bold mb-3">Post a Task</h1>
-            <form method="post">
+            <form method="post" class="js-loading-form">
                 <div class="mb-3">
                     <label class="form-label">Title</label>
                     <input class="form-control" name="title" maxlength="160" required>
@@ -24,7 +24,7 @@
                         <input class="form-control" name="location" required>
                     </div>
                 </div>
-                <button class="btn gradient-btn w-100">Post Task</button>
+                <button class="btn gradient-btn w-100" data-loading-text="Posting...">Post Task</button>
             </form>
         </div>
     </div>

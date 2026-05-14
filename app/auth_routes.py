@@ -3,7 +3,7 @@ from flask import Blueprint, flash, g, make_response, redirect, render_template,
 from .auth_utils import create_token
 from .extensions import db
 from .models import User
-from .services import ensure_wallet
+from .services import ensure_wallet, validate_password
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 
@@ -24,14 +24,19 @@ def signup():
         if not all([full_name, email, phone, password]):
             flash("All fields are required.", "danger")
             return render_template("auth/signup.html")
-        if len(password) < 8:
-            flash("Password must be at least 8 characters.", "danger")
+        password_errors = validate_password(password)
+        if password_errors:
+            for error in password_errors:
+                flash(error, "danger")
             return render_template("auth/signup.html")
         if not accepted_privacy or not accepted_terms:
             flash("You must accept the Privacy Policy and Terms & Conditions.", "danger")
             return render_template("auth/signup.html")
-        if User.query.filter((User.email == email) | (User.phone == phone)).first():
-            flash("Email or phone is already registered.", "danger")
+        if User.query.filter_by(email=email).first():
+            flash("Email is already registered.", "danger")
+            return render_template("auth/signup.html")
+        if User.query.filter_by(phone=phone).first():
+            flash("Phone number is already registered.", "danger")
             return render_template("auth/signup.html")
 
         user = User(full_name=full_name, email=email, phone=phone, role="USER")

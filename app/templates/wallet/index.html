@@ -17,12 +17,16 @@
                         <strong>₹{{ "%.2f"|format(g.current_user.wallet.available_balance) }}</strong>
                     </div>
                 </div>
+                <div class="fee-note mt-4">
+                    <i class="bi bi-info-circle-fill"></i>
+                    <span>Note: 5% platform fee applies on task completion.</span>
+                </div>
                 <div class="panel mt-4">
                     <h2 class="h5 fw-bold mb-3">Add Money</h2>
                     <form id="walletTopupForm" data-key="{{ razorpay_key_id }}">
                         <label class="form-label">Amount in INR</label>
                         <input class="form-control mb-3" type="number" name="amount" min="1" step="0.01" required>
-                        <button class="btn gradient-btn w-100" type="submit">Pay with Razorpay</button>
+                        <button class="btn gradient-btn w-100" type="submit" data-loading-text="Opening Razorpay...">Pay with Razorpay</button>
                     </form>
                 </div>
             </div>
@@ -32,7 +36,7 @@
                     {% for txn in transactions %}
                         <div class="list-row">
                             <div>
-                                <strong>{{ txn.type.replace("_", " ") }}</strong>
+                                <strong>{{ txn.type.replace("_", " ").title() }}</strong>
                                 <p class="mb-0 text-muted">{{ txn.status }} · {{ txn.created_at.strftime("%d %b %Y") }}</p>
                             </div>
                             <b class="{{ 'text-success' if txn.amount >= 0 else 'text-danger' }}">₹{{ "%.2f"|format(txn.amount) }}</b>

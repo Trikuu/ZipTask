@@ -164,6 +164,7 @@ JWT_SECRET_KEY=your-long-random-jwt-secret
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/ziptask
 DEFAULT_ADMIN_EMAIL=admin@ziptask.in
 DEFAULT_ADMIN_PASSWORD=ChangeAdminPassword123!
+DEFAULT_ADMIN_PHONE=9110766718
 RAZORPAY_KEY_ID=rzp_test_your_key_id
 RAZORPAY_KEY_SECRET=your_razorpay_key_secret
 ```
@@ -193,9 +194,10 @@ Admin credentials are configured in `.env`:
 ```env
 DEFAULT_ADMIN_EMAIL=admin@ziptask.in
 DEFAULT_ADMIN_PASSWORD=ChangeAdminPassword123!
+DEFAULT_ADMIN_PHONE=9110766718
 ```
 
-Change these before first production deployment. After deployment, login with the admin email and password at `/auth/login`. Admin users are redirected to `/admin`, and the admin panel is also available at:
+Change these before first production deployment. `DEFAULT_ADMIN_PHONE` is used when `python -m flask bootstrap-admin` creates or updates the admin account. After deployment, login with the admin email and password at `/auth/login`. Admin users are redirected to `/admin`, and the admin panel is also available at:
 
 ```text
 /admin/
@@ -274,6 +276,7 @@ JWT_SECRET_KEY=your-production-jwt-secret
 DATABASE_URL=your-render-postgresql-internal-url
 DEFAULT_ADMIN_EMAIL=your-admin-email
 DEFAULT_ADMIN_PASSWORD=your-strong-admin-password
+DEFAULT_ADMIN_PHONE=9110766718
 RAZORPAY_KEY_ID=your-live-or-test-key-id
 RAZORPAY_KEY_SECRET=your-live-or-test-key-secret
 ```

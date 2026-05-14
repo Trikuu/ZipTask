@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Transactions - ZipTask{% endblock %}
+{% block content %}
+<section class="page-section">
+    <div class="container">
+        <div class="mb-4">
+            <p class="eyebrow text-purple mb-1">Wallet activity</p>
+            <h1 class="h2 fw-bold">Transactions</h1>
+        </div>
+        <div class="panel table-responsive">
+            <table class="table align-middle">
+                <thead><tr><th>Date</th><th>Type</th><th>Status</th><th>Reference</th><th class="text-end">Amount</th></tr></thead>
+                <tbody>
+                {% for txn in transactions %}
+                    <tr>
+                        <td>{{ txn.created_at.strftime("%d %b %Y") }}</td>
+                        <td>{{ txn.type.replace("_", " ").title() }}</td>
+                        <td><span class="badge status-badge">{{ txn.status }}</span></td>
+                        <td>{{ txn.reference or "-" }}</td>
+                        <td class="text-end fw-bold {{ 'text-success' if txn.amount >= 0 else 'text-danger' }}">₹{{ "%.2f"|format(txn.amount) }}</td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="5" class="text-center text-muted py-4">No transactions yet.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+{% endblock %}

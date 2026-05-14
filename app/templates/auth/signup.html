@@ -5,7 +5,7 @@
     <div class="container">
         <div class="auth-card mx-auto">
             <h1 class="h3 fw-bold mb-3">Create your ZipTask account</h1>
-            <form method="post">
+            <form method="post" class="js-loading-form">
                 <div class="mb-3">
                     <label class="form-label">Full name</label>
                     <input class="form-control" name="full_name" required>
@@ -20,7 +20,8 @@
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Password</label>
-                    <input class="form-control" type="password" name="password" minlength="8" required>
+                    <input class="form-control" type="password" name="password" minlength="8" maxlength="12" pattern="(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,12}" required>
+                    <div class="form-text">8-12 characters with 1 uppercase letter, 1 number, and 1 special character.</div>
                 </div>
                 <div class="form-check mb-2">
                     <input class="form-check-input" type="checkbox" name="accept_privacy" id="acceptPrivacy" required>
@@ -30,7 +31,7 @@
                     <input class="form-check-input" type="checkbox" name="accept_terms" id="acceptTerms" required>
                     <label class="form-check-label" for="acceptTerms">I accept the <a href="{{ url_for('main.terms') }}">Terms & Conditions</a>.</label>
                 </div>
-                <button class="btn gradient-btn w-100" type="submit">Signup</button>
+                <button class="btn gradient-btn w-100" type="submit" data-loading-text="Creating account...">Signup</button>
             </form>
         </div>
     </div>

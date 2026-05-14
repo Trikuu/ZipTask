@@ -1,4 +1,5 @@
 from flask import Flask
+from sqlalchemy import inspect
 
 from config import Config
 
@@ -18,11 +19,13 @@ def create_app(config_class=Config):
     from .admin_routes import admin_bp
     from .auth_routes import auth_bp
     from .main_routes import main_bp
+    from .profile_routes import profile_bp
     from .task_routes import task_bp
     from .wallet_routes import wallet_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp)
+    app.register_blueprint(profile_bp)
     app.register_blueprint(task_bp)
     app.register_blueprint(wallet_bp)
     app.register_blueprint(admin_bp)
@@ -36,7 +39,8 @@ def create_app(config_class=Config):
 
     with app.app_context():
         try:
-            bootstrap_admin()
+            if inspect(db.engine).has_table("users"):
+                bootstrap_admin()
         except Exception as exc:
             app.logger.warning("Admin bootstrap skipped until database is ready: %s", exc)
 

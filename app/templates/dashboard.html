@@ -8,9 +8,35 @@
                 <p class="eyebrow text-purple mb-1">Welcome, {{ g.current_user.full_name }}</p>
                 <h1 class="h2 fw-bold">Dashboard</h1>
             </div>
-            <div class="wallet-pill">
-                <span>Available</span>
-                <strong>₹{{ "%.2f"|format(g.current_user.wallet.available_balance) }}</strong>
+        </div>
+        <div class="row g-4 mb-4">
+            <div class="col-md-6 col-xl-3">
+                <div class="stat-card balance">
+                    <i class="bi bi-wallet2"></i>
+                    <span>Total Balance</span>
+                    <strong>₹{{ "%.2f"|format(g.current_user.wallet.balance) }}</strong>
+                </div>
+            </div>
+            <div class="col-md-6 col-xl-3">
+                <div class="stat-card">
+                    <i class="bi bi-lightning-charge-fill"></i>
+                    <span>Active Tasks</span>
+                    <strong>{{ active_tasks }}</strong>
+                </div>
+            </div>
+            <div class="col-md-6 col-xl-3">
+                <div class="stat-card">
+                    <i class="bi bi-check2-circle"></i>
+                    <span>Completed Tasks</span>
+                    <strong>{{ completed_tasks }}</strong>
+                </div>
+            </div>
+            <div class="col-md-6 col-xl-3">
+                <div class="stat-card">
+                    <i class="bi bi-lock-fill"></i>
+                    <span>Locked Balance</span>
+                    <strong>₹{{ "%.2f"|format(g.current_user.wallet.locked_balance) }}</strong>
+                </div>
             </div>
         </div>
         <div class="row g-4">
@@ -26,8 +52,8 @@
                             <div class="text-end">
                                 <b>₹{{ "%.2f"|format(task.budget) }}</b>
                                 {% if task.creator_id == g.current_user.id and task.status == "ASSIGNED" %}
-                                    <form method="post" action="{{ url_for('tasks.complete_task', task_id=task.id) }}" class="mt-2">
-                                        <button class="btn btn-sm gradient-btn">Mark Complete</button>
+                                    <form method="post" action="{{ url_for('tasks.complete_task', task_id=task.id) }}" class="mt-2 js-loading-form">
+                                        <button class="btn btn-sm gradient-btn" data-loading-text="Completing...">Mark Complete</button>
                                     </form>
                                 {% endif %}
                             </div>
@@ -43,7 +69,7 @@
                     {% for txn in recent_transactions %}
                         <div class="list-row">
                             <div>
-                                <strong>{{ txn.type.replace("_", " ") }}</strong>
+                                <strong>{{ txn.type.replace("_", " ").title() }}</strong>
                                 <p class="mb-0 text-muted">{{ txn.status }}</p>
                             </div>
                             <b class="{{ 'text-success' if txn.amount >= 0 else 'text-danger' }}">₹{{ "%.2f"|format(txn.amount) }}</b>
