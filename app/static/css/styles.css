@@ -494,3 +494,24 @@ footer a {
         flex-direction: column;
     }
 }
+.app-sidebar {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-nav {
+    flex-grow: 1;
+}
+
+.sidebar-logout-form {
+    padding: 15px;
+}
+
+.sidebar-logout {
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 8px;
+}

@@ -11,30 +11,57 @@
 <body>
 {% set avatar = url_for('static', filename=g.current_user.profile_image) if g.current_user and g.current_user.profile_image else url_for('static', filename='img/default-avatar.svg') %}
 {% if g.current_user %}
-<aside class="app-sidebar">
+<aside class="app-sidebar d-flex flex-column">
     <a class="sidebar-brand" href="{{ url_for('main.dashboard') }}">ZipTask</a>
-    <div class="sidebar-profile">
-        <img src="{{ avatar }}" alt="Profile photo">
+
+    <div class="sidebar-profile text-center">
+        <img src="{{ avatar }}" alt="Profile photo" class="mb-2">
         <h2>{{ g.current_user.full_name }}</h2>
         <p>{{ g.current_user.email }}</p>
+
         <div class="sidebar-balance">
             <span>Wallet Balance</span>
             <strong>Rs. {{ "%.2f"|format(g.current_user.wallet.available_balance) }}</strong>
         </div>
     </div>
-    <nav class="sidebar-nav">
-        <a href="{{ url_for('main.dashboard') }}" class="{{ 'active' if request.endpoint == 'main.dashboard' else '' }}"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
-        <a href="{{ url_for('tasks.post_task') }}" class="{{ 'active' if request.endpoint == 'tasks.post_task' else '' }}"><i class="bi bi-plus-square-fill"></i> Post Task</a>
-        <a href="{{ url_for('main.transactions') }}" class="{{ 'active' if request.endpoint == 'main.transactions' else '' }}"><i class="bi bi-receipt"></i> Transactions</a>
-        <a href="{{ url_for('wallet.wallet') }}" class="{{ 'active' if request.endpoint == 'wallet.wallet' else '' }}"><i class="bi bi-wallet2"></i> Wallet</a>
-        <a href="{{ url_for('profile.profile') }}" class="{{ 'active' if request.endpoint == 'profile.profile' else '' }}"><i class="bi bi-person-circle"></i> Profile</a>
-        <a href="{{ url_for('tasks.browse') }}" class="{{ 'active' if request.endpoint == 'tasks.browse' else '' }}"><i class="bi bi-list-task"></i> Browse Tasks</a>
+
+    <nav class="sidebar-nav flex-grow-1">
+        <a href="{{ url_for('main.dashboard') }}" class="{{ 'active' if request.endpoint == 'main.dashboard' else '' }}">
+            <i class="bi bi-grid-1x2-fill"></i> Dashboard
+        </a>
+
+        <a href="{{ url_for('tasks.post_task') }}" class="{{ 'active' if request.endpoint == 'tasks.post_task' else '' }}">
+            <i class="bi bi-plus-square-fill"></i> Post Task
+        </a>
+
+        <a href="{{ url_for('main.transactions') }}" class="{{ 'active' if request.endpoint == 'main.transactions' else '' }}">
+            <i class="bi bi-receipt"></i> Transactions
+        </a>
+
+        <a href="{{ url_for('wallet.wallet') }}" class="{{ 'active' if request.endpoint == 'wallet.wallet' else '' }}">
+            <i class="bi bi-wallet2"></i> Wallet
+        </a>
+
+        <a href="{{ url_for('profile.profile') }}" class="{{ 'active' if request.endpoint == 'profile.profile' else '' }}">
+            <i class="bi bi-person-circle"></i> Profile
+        </a>
+
+        <a href="{{ url_for('tasks.browse') }}" class="{{ 'active' if request.endpoint == 'tasks.browse' else '' }}">
+            <i class="bi bi-list-task"></i> Browse Tasks
+        </a>
+
         {% if g.current_user.is_admin %}
-            <a href="{{ url_for('admin.panel') }}" class="{{ 'active' if request.endpoint == 'admin.panel' else '' }}"><i class="bi bi-shield-lock-fill"></i> Admin</a>
+        <a href="{{ url_for('admin.panel') }}" class="{{ 'active' if request.endpoint == 'admin.panel' else '' }}">
+            <i class="bi bi-shield-lock-fill"></i> Admin
+        </a>
         {% endif %}
     </nav>
-    <form method="post" action="{{ url_for('auth.logout') }}" class="mt-auto js-loading-form">
-        <button class="sidebar-logout" type="submit"><i class="bi bi-box-arrow-right"></i> Logout</button>
+
+    <!-- 🔴 Logout fixed at bottom -->
+    <form method="post" action="{{ url_for('auth.logout') }}" class="sidebar-logout-form mt-auto js-loading-form">
+        <button class="sidebar-logout w-100" type="submit">
+            <i class="bi bi-box-arrow-right"></i> Logout
+        </button>
     </form>
 </aside>
 {% else %}
