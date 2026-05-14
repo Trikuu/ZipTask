@@ -58,12 +58,20 @@ def create_app(config_class=Config):
 
     # Auto bootstrap admin if DB ready
     with app.app_context():
-        try:
-            if inspect(db.engine).has_table("users"):
-                bootstrap_admin()
-        except Exception as exc:
-            app.logger.warning(
-                "Admin bootstrap skipped until database is ready: %s", exc
-            )
+    try:
+        if inspect(db.engine).has_table("users"):
+
+            # 🔥 AUTO FIX MISSING COLUMNS
+            with db.engine.connect() as conn:
+                conn.execute(db.text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE"))
+                conn.execute(db.text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE"))
+                conn.execute(db.text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_frozen BOOLEAN DEFAULT FALSE"))
+                conn.execute(db.text("ALTER TABLE users ADD COLUMN IF NOT EXISTS has_pending_dues BOOLEAN DEFAULT FALSE"))
+                conn.commit()
+
+            bootstrap_admin()
+
+    except Exception as exc:
+        app.logger.warning("Admin bootstrap skipped until database is ready: %s", exc)
 
     return app
