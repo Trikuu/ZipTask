@@ -10,18 +10,89 @@
             </div>
             <div class="wallet-pill">
                 <span>Platform Earnings</span>
-                <strong>₹{{ "%.2f"|format(total_earnings) }}</strong>
+                <strong>Rs. {{ "%.2f"|format(total_earnings) }}</strong>
             </div>
         </div>
+
+        <div class="row g-4 mb-4">
+            <div class="col-md-3"><div class="stat-card"><i class="bi bi-people-fill"></i><span>Users</span><strong>{{ users|length }}</strong></div></div>
+            <div class="col-md-3"><div class="stat-card"><i class="bi bi-list-task"></i><span>Tasks</span><strong>{{ tasks|length }}</strong></div></div>
+            <div class="col-md-3"><div class="stat-card"><i class="bi bi-receipt"></i><span>Transactions</span><strong>{{ transactions|length }}</strong></div></div>
+            <div class="col-md-3"><div class="stat-card balance"><i class="bi bi-cash-stack"></i><span>Fee Total</span><strong>Rs. {{ "%.2f"|format(total_earnings) }}</strong></div></div>
+        </div>
+
+        <div class="panel mb-4">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label">User</label>
+                    <select class="form-select" name="user_id">
+                        <option value="">All users</option>
+                        {% for user in users %}
+                            <option value="{{ user.id }}" {{ "selected" if filters.user_id == user.id else "" }}>{{ user.email }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Task status</label>
+                    <select class="form-select" name="status">
+                        <option value="">All statuses</option>
+                        {% for item in ["OPEN", "REQUESTED", "ASSIGNED", "COMPLETED"] %}
+                            <option value="{{ item }}" {{ "selected" if filters.status == item else "" }}>{{ item }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">From</label>
+                    <input class="form-control" type="date" name="date_from" value="{{ filters.date_from }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">To</label>
+                    <input class="form-control" type="date" name="date_to" value="{{ filters.date_to }}">
+                </div>
+                <div class="col-md-2 d-grid">
+                    <button class="btn gradient-btn">Apply Filters</button>
+                </div>
+            </form>
+        </div>
+
         <div class="row g-4">
             <div class="col-12">
                 <div class="panel table-responsive">
                     <h2 class="h5 fw-bold mb-3">Users</h2>
                     <table class="table align-middle">
-                        <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Role</th><th>Balance</th></tr></thead>
+                        <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Role</th><th>Status</th><th>Wallet</th><th>Actions</th></tr></thead>
                         <tbody>
                         {% for user in users %}
-                            <tr><td>{{ user.full_name }}</td><td>{{ user.email }}</td><td>{{ user.phone }}</td><td>{{ user.role }}</td><td>₹{{ "%.2f"|format(user.wallet.balance) }}</td></tr>
+                            <tr>
+                                <td>{{ user.full_name }}</td>
+                                <td>{{ user.email }}</td>
+                                <td>{{ user.phone }}</td>
+                                <td>{{ user.role }}</td>
+                                <td>
+                                    {% if user.is_deleted %}
+                                        <span class="badge text-bg-secondary">Deleted</span>
+                                    {% elif user.is_active %}
+                                        <span class="badge text-bg-success">Active</span>
+                                    {% else %}
+                                        <span class="badge text-bg-warning">Inactive</span>
+                                    {% endif %}
+                                </td>
+                                <td>Rs. {{ "%.2f"|format(user.wallet.balance if user.wallet else 0) }}</td>
+                                <td>
+                                    {% if not user.is_admin and user.id != g.current_user.id and not user.is_deleted %}
+                                        <div class="d-flex flex-wrap gap-2">
+                                            <form method="post" action="{{ url_for('admin.toggle_user', user_id=user.id) }}" class="js-loading-form">
+                                                <button class="btn btn-sm btn-outline-primary" data-loading-text="Saving...">{{ "Deactivate" if user.is_active else "Activate" }}</button>
+                                            </form>
+                                            <form method="post" action="{{ url_for('admin.delete_user', user_id=user.id) }}" class="js-loading-form" onsubmit="return confirm('Delete this user? Their records will remain for audit history.');">
+                                                <button class="btn btn-sm btn-outline-danger" data-loading-text="Deleting...">Delete</button>
+                                            </form>
+                                        </div>
+                                    {% else %}
+                                        <span class="text-muted">Protected</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
                         {% endfor %}
                         </tbody>
                     </table>
@@ -31,10 +102,19 @@
                 <div class="panel table-responsive">
                     <h2 class="h5 fw-bold mb-3">Tasks</h2>
                     <table class="table align-middle">
-                        <thead><tr><th>Title</th><th>Budget</th><th>Status</th><th>Creator</th><th>Performer</th></tr></thead>
+                        <thead><tr><th>Title</th><th>Budget</th><th>Status</th><th>Creator</th><th>Performer</th><th>Created</th></tr></thead>
                         <tbody>
                         {% for task in tasks %}
-                            <tr><td>{{ task.title }}</td><td>₹{{ "%.2f"|format(task.budget) }}</td><td>{{ task.status }}</td><td>{{ task.creator.email }}</td><td>{{ task.performer.email if task.performer else "-" }}</td></tr>
+                            <tr>
+                                <td>{{ task.title }}</td>
+                                <td>Rs. {{ "%.2f"|format(task.budget) }}</td>
+                                <td><span class="badge status-badge">{{ task.status }}</span></td>
+                                <td>{{ task.creator.email }}</td>
+                                <td>{{ task.performer.email if task.performer else "-" }}</td>
+                                <td>{{ task.created_at.strftime("%d %b %Y") }}</td>
+                            </tr>
+                        {% else %}
+                            <tr><td colspan="6" class="text-center text-muted py-4">No tasks match the filters.</td></tr>
                         {% endfor %}
                         </tbody>
                     </table>
@@ -44,10 +124,19 @@
                 <div class="panel table-responsive">
                     <h2 class="h5 fw-bold mb-3">Transactions</h2>
                     <table class="table align-middle">
-                        <thead><tr><th>User</th><th>Amount</th><th>Type</th><th>Status</th><th>Reference</th></tr></thead>
+                        <thead><tr><th>User</th><th>Amount</th><th>Type</th><th>Status</th><th>Reference</th><th>Date</th></tr></thead>
                         <tbody>
                         {% for txn in transactions %}
-                            <tr><td>{{ txn.user.email }}</td><td>₹{{ "%.2f"|format(txn.amount) }}</td><td>{{ txn.type }}</td><td>{{ txn.status }}</td><td>{{ txn.reference or "-" }}</td></tr>
+                            <tr>
+                                <td>{{ txn.user.email }}</td>
+                                <td class="fw-bold {{ 'text-success' if txn.amount >= 0 else 'text-danger' }}">Rs. {{ "%.2f"|format(txn.amount) }}</td>
+                                <td>{{ txn.type.replace("_", " ").title() }}</td>
+                                <td>{{ txn.status }}</td>
+                                <td>{{ txn.reference or "-" }}</td>
+                                <td>{{ txn.created_at.strftime("%d %b %Y") }}</td>
+                            </tr>
+                        {% else %}
+                            <tr><td colspan="6" class="text-center text-muted py-4">No transactions match the filters.</td></tr>
                         {% endfor %}
                         </tbody>
                     </table>

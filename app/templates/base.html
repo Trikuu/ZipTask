@@ -11,8 +11,7 @@
 <body>
 {% set avatar = url_for('static', filename=g.current_user.profile_image) if g.current_user and g.current_user.profile_image else url_for('static', filename='img/default-avatar.svg') %}
 {% if g.current_user %}
-<button class="mobile-menu btn gradient-btn" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileSidebar">Menu</button>
-<aside class="app-sidebar d-none d-lg-flex">
+<aside class="app-sidebar">
     <a class="sidebar-brand" href="{{ url_for('main.dashboard') }}">ZipTask</a>
     <div class="sidebar-profile">
         <img src="{{ avatar }}" alt="Profile photo">
@@ -20,7 +19,7 @@
         <p>{{ g.current_user.email }}</p>
         <div class="sidebar-balance">
             <span>Wallet Balance</span>
-            <strong>₹{{ "%.2f"|format(g.current_user.wallet.available_balance) }}</strong>
+            <strong>Rs. {{ "%.2f"|format(g.current_user.wallet.available_balance) }}</strong>
         </div>
     </div>
     <nav class="sidebar-nav">
@@ -35,39 +34,9 @@
         {% endif %}
     </nav>
     <form method="post" action="{{ url_for('auth.logout') }}" class="mt-auto js-loading-form">
-        <button class="sidebar-logout" type="submit">Logout</button>
+        <button class="sidebar-logout" type="submit"><i class="bi bi-box-arrow-right"></i> Logout</button>
     </form>
 </aside>
-
-<div class="offcanvas offcanvas-start mobile-sidebar" tabindex="-1" id="mobileSidebar">
-    <div class="offcanvas-header">
-        <h5 class="offcanvas-title">ZipTask</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
-    </div>
-    <div class="offcanvas-body">
-        <div class="sidebar-profile">
-            <img src="{{ avatar }}" alt="Profile photo">
-            <h2>{{ g.current_user.full_name }}</h2>
-            <p>{{ g.current_user.email }}</p>
-            <div class="sidebar-balance">
-                <span>Wallet Balance</span>
-                <strong>₹{{ "%.2f"|format(g.current_user.wallet.available_balance) }}</strong>
-            </div>
-        </div>
-        <nav class="sidebar-nav">
-            <a href="{{ url_for('main.dashboard') }}"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
-            <a href="{{ url_for('tasks.post_task') }}"><i class="bi bi-plus-square-fill"></i> Post Task</a>
-            <a href="{{ url_for('main.transactions') }}"><i class="bi bi-receipt"></i> Transactions</a>
-            <a href="{{ url_for('wallet.wallet') }}"><i class="bi bi-wallet2"></i> Wallet</a>
-            <a href="{{ url_for('profile.profile') }}"><i class="bi bi-person-circle"></i> Profile</a>
-            <a href="{{ url_for('tasks.browse') }}"><i class="bi bi-list-task"></i> Browse Tasks</a>
-            {% if g.current_user.is_admin %}<a href="{{ url_for('admin.panel') }}"><i class="bi bi-shield-lock-fill"></i> Admin</a>{% endif %}
-        </nav>
-        <form method="post" action="{{ url_for('auth.logout') }}" class="js-loading-form">
-            <button class="sidebar-logout" type="submit">Logout</button>
-        </form>
-    </div>
-</div>
 {% else %}
 <header class="public-header">
     <div class="container d-flex justify-content-between align-items-center py-3">
@@ -87,7 +56,7 @@
             {% if messages %}
                 {% for category, message in messages %}
                     <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm" role="alert">
-                        {% if category == "success" %}<span class="me-1">✔</span>{% endif %}{{ message }}
+                        {% if category == "success" %}<i class="bi bi-check-circle-fill me-1"></i>{% elif category == "danger" %}<i class="bi bi-x-circle-fill me-1"></i>{% endif %}{{ message }}
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
                 {% endfor %}
@@ -99,8 +68,8 @@
 
 <footer class="py-4 mt-5 {{ 'app-footer' if g.current_user else '' }}">
     <div class="container d-flex flex-column flex-md-row justify-content-between gap-2">
-        <span>© 2026 ZipTask. Local tasks, simple payouts.</span>
-        <span><a href="{{ url_for('main.privacy_policy') }}">Privacy Policy</a> · <a href="{{ url_for('main.terms') }}">Terms & Conditions</a></span>
+        <span>Copyright 2026 ZipTask. Local tasks, simple payouts.</span>
+        <span><a href="{{ url_for('main.privacy_policy') }}">Privacy Policy</a> | <a href="{{ url_for('main.terms') }}">Terms & Conditions</a></span>
     </div>
 </footer>
 

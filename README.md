@@ -1,6 +1,6 @@
 # ZipTask
 
-ZipTask is a clean Flask + PostgreSQL local task marketplace. Users post INR-budgeted tasks, other users accept them, and completion releases 95% to the performer wallet and 5% to the platform admin wallet.
+ZipTask is a clean Flask + PostgreSQL local task marketplace. Users post INR-budgeted tasks, other users request to join, task creators assign one performer, and completion releases 95% to the performer wallet and 5% to the platform admin wallet.
 
 ## Tech Stack
 
@@ -65,6 +65,7 @@ Files created:
 - `run.py`, `config.py`
 - `app/__init__.py`, `app/extensions.py`, `app/models.py`
 - `app/auth_utils.py`, `app/auth_routes.py`, `app/main_routes.py`
+- `app/profile_routes.py`
 - `migrations/*`, `migrations/versions/0001_initial_schema.py`
 - `app/templates/auth/*`, `app/templates/base.html`
 
@@ -91,9 +92,9 @@ Files created:
 Working features:
 
 - Create task with title, description, budget, and location
-- Browse open, assigned, and completed tasks
-- Accept open tasks
-- Assign performer
+- Browse open, requested, assigned, and completed tasks
+- Request to join open tasks
+- Task creator reviews applicants and assigns one performer
 - Mark assigned tasks complete
 
 ### Phase 3: Wallet and Razorpay
@@ -128,6 +129,26 @@ Working features:
 - View tasks
 - View transactions
 - View total platform earnings
+- Activate/deactivate users
+- Soft-delete users while preserving audit records
+- Filter tasks and transactions by date, user, and task status
+
+### Password Reset
+
+Files created/updated:
+
+- `app/templates/auth/forgot_password.html`
+- `app/templates/auth/reset_password.html`
+- `app/auth_routes.py`
+- `app/services.py`
+
+Working features:
+
+- Forgot Password link on login page
+- Email reset request through SMTP
+- Secure signed reset token
+- 30-minute token expiry
+- Password reset using the same password rules as signup
 
 ## Local Setup
 
@@ -167,6 +188,11 @@ DEFAULT_ADMIN_PASSWORD=ChangeAdminPassword123!
 DEFAULT_ADMIN_PHONE=9110766718
 RAZORPAY_KEY_ID=rzp_test_your_key_id
 RAZORPAY_KEY_SECRET=your_razorpay_key_secret
+MAIL_SERVER=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USERNAME=your-email@example.com
+MAIL_PASSWORD=your-app-password
+MAIL_USE_TLS=true
 ```
 
 ### 4. Run migrations and bootstrap admin
@@ -279,6 +305,11 @@ DEFAULT_ADMIN_PASSWORD=your-strong-admin-password
 DEFAULT_ADMIN_PHONE=9110766718
 RAZORPAY_KEY_ID=your-live-or-test-key-id
 RAZORPAY_KEY_SECRET=your-live-or-test-key-secret
+MAIL_SERVER=your-smtp-host
+MAIL_PORT=587
+MAIL_USERNAME=your-smtp-username
+MAIL_PASSWORD=your-smtp-password
+MAIL_USE_TLS=true
 ```
 
 Render sometimes provides PostgreSQL URLs starting with `postgres://`. ZipTask automatically converts this to SQLAlchemy's required `postgresql://` format, so login and database access work correctly after deployment.
@@ -290,8 +321,10 @@ Render sometimes provides PostgreSQL URLs starting with `postgres://`. ZipTask a
 3. Razorpay Checkout collects payment.
 4. Backend verifies `razorpay_order_id`, `razorpay_payment_id`, and `razorpay_signature`.
 5. Wallet is credited only after signature verification.
-6. When a task is accepted, the creator's task budget is locked.
-7. When the creator marks it complete:
+6. Other users request to join a task.
+7. The task creator assigns one applicant.
+8. When assigned, the creator's task budget is locked.
+9. When the creator marks it complete:
    - 95% is credited to performer wallet.
    - 5% is credited to admin wallet.
    - The locked amount is deducted from creator wallet.

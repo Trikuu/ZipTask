@@ -5,7 +5,7 @@ from flask import Blueprint, flash, g, redirect, render_template, request, url_f
 
 from .auth_utils import login_required
 from .extensions import db
-from .models import Task
+from .models import Task, TaskApplication
 from .services import get_admin_user, money, record_transaction
 
 task_bp = Blueprint("tasks", __name__, url_prefix="/tasks")
@@ -49,38 +49,72 @@ def post_task():
 def browse():
     status = request.args.get("status", "OPEN")
     query = Task.query
-    if status in {"OPEN", "ASSIGNED", "COMPLETED"}:
+    if status in {"OPEN", "REQUESTED", "ASSIGNED", "COMPLETED"}:
         query = query.filter_by(status=status)
     tasks = query.order_by(Task.created_at.desc()).all()
-    return render_template("tasks/browse.html", tasks=tasks, status=status)
+    applied_task_ids = set()
+    if g.current_user:
+        applied_task_ids = {
+            item.task_id
+            for item in TaskApplication.query.filter_by(user_id=g.current_user.id).all()
+        }
+    return render_template("tasks/browse.html", tasks=tasks, status=status, applied_task_ids=applied_task_ids)
 
 
-@task_bp.route("/<int:task_id>/accept", methods=["POST"])
+@task_bp.route("/<int:task_id>/apply", methods=["POST"])
 @login_required
-def accept_task(task_id):
+def apply_task(task_id):
     task = Task.query.get_or_404(task_id)
-    wallet = g.current_user.wallet
 
     if task.creator_id == g.current_user.id:
-        flash("You cannot accept your own task.", "danger")
+        flash("You cannot apply to your own task.", "danger")
         return redirect(url_for("tasks.browse"))
-    if task.status != "OPEN":
-        flash("This task is no longer open.", "warning")
+    if task.status not in {"OPEN", "REQUESTED"}:
+        flash("This task is no longer accepting requests.", "warning")
         return redirect(url_for("tasks.browse"))
-    if task.creator.wallet.available_balance < task.budget_decimal:
-        flash("Task creator does not have enough wallet balance to lock this budget.", "danger")
-        return redirect(url_for("tasks.browse"))
-    if wallet is None:
-        flash("Wallet not found. Please contact support.", "danger")
+    existing = TaskApplication.query.filter_by(task_id=task.id, user_id=g.current_user.id).first()
+    if existing:
+        flash("You have already requested to join this task.", "warning")
         return redirect(url_for("tasks.browse"))
 
+    db.session.add(TaskApplication(task_id=task.id, user_id=g.current_user.id, status="PENDING"))
+    task.status = "REQUESTED"
+    db.session.commit()
+    flash("Request sent", "success")
+    return redirect(url_for("tasks.browse", status="REQUESTED"))
+
+
+@task_bp.route("/<int:task_id>/assign/<int:application_id>", methods=["POST"])
+@login_required
+def assign_task(task_id, application_id):
+    task = Task.query.get_or_404(task_id)
+    application = TaskApplication.query.filter_by(id=application_id, task_id=task.id).first_or_404()
+
+    if task.creator_id != g.current_user.id:
+        flash("Only the task creator can assign this task.", "danger")
+        return redirect(url_for("main.dashboard"))
+    if task.status == "ASSIGNED":
+        flash("This task is already assigned.", "warning")
+        return redirect(url_for("main.dashboard"))
+    if task.status == "COMPLETED":
+        flash("Completed tasks cannot be reassigned.", "warning")
+        return redirect(url_for("main.dashboard"))
+    if task.creator.wallet.available_balance < task.budget_decimal:
+        flash("Add enough wallet balance before assigning this task.", "danger")
+        return redirect(url_for("wallet.wallet"))
+
     task.creator.wallet.locked_balance += task.budget_decimal
-    task.assigned_to = g.current_user.id
+    task.assigned_to = application.user_id
     task.status = "ASSIGNED"
     task.assigned_at = datetime.now(timezone.utc)
+    application.status = "ASSIGNED"
+    TaskApplication.query.filter(
+        TaskApplication.task_id == task.id,
+        TaskApplication.id != application.id,
+    ).update({"status": "REJECTED"}, synchronize_session=False)
     record_transaction(task.creator_id, task.budget_decimal, "TASK_BUDGET_LOCKED", "SUCCESS", task.id)
     db.session.commit()
-    flash("Task accepted successfully. Budget is locked.", "success")
+    flash("Task assigned", "success")
     return redirect(url_for("main.dashboard"))
 
 

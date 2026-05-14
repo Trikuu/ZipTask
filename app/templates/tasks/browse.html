@@ -10,6 +10,7 @@
             </div>
             <div class="filter-links">
                 <a class="{{ 'active' if status == 'OPEN' else '' }}" href="{{ url_for('tasks.browse', status='OPEN') }}">Open</a>
+                <a class="{{ 'active' if status == 'REQUESTED' else '' }}" href="{{ url_for('tasks.browse', status='REQUESTED') }}">Requested</a>
                 <a class="{{ 'active' if status == 'ASSIGNED' else '' }}" href="{{ url_for('tasks.browse', status='ASSIGNED') }}">Assigned</a>
                 <a class="{{ 'active' if status == 'COMPLETED' else '' }}" href="{{ url_for('tasks.browse', status='COMPLETED') }}">Completed</a>
             </div>
@@ -25,12 +26,16 @@
                         <p class="text-muted">{{ task.description }}</p>
                         <div class="d-flex justify-content-between">
                             <span>{{ task.location }}</span>
-                            <strong>₹{{ "%.2f"|format(task.budget) }}</strong>
+                            <strong>Rs. {{ "%.2f"|format(task.budget) }}</strong>
                         </div>
-                        {% if g.current_user and task.status == "OPEN" and task.creator_id != g.current_user.id %}
-                            <form method="post" action="{{ url_for('tasks.accept_task', task_id=task.id) }}" class="mt-3 js-loading-form">
-                                <button class="btn gradient-btn w-100" data-loading-text="Accepting...">Accept Task</button>
-                            </form>
+                        {% if g.current_user and task.status in ["OPEN", "REQUESTED"] and task.creator_id != g.current_user.id %}
+                            {% if task.id in applied_task_ids %}
+                                <button class="btn btn-outline-secondary w-100 mt-3" disabled>Request Sent</button>
+                            {% else %}
+                                <form method="post" action="{{ url_for('tasks.apply_task', task_id=task.id) }}" class="mt-3 js-loading-form">
+                                    <button class="btn gradient-btn w-100" data-loading-text="Sending...">Request to Join</button>
+                                </form>
+                            {% endif %}
                         {% endif %}
                     </div>
                 </div>

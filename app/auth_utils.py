@@ -29,7 +29,9 @@ def load_user_from_cookie() -> None:
         user_id = int(payload["sub"])
     except (jwt.PyJWTError, KeyError, ValueError):
         return
-    g.current_user = User.query.get(user_id)
+    user = User.query.get(user_id)
+    if user and user.is_active and not user.is_deleted:
+        g.current_user = user
 
 
 def login_required(view):

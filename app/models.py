@@ -16,12 +16,15 @@ class User(db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     profile_image = db.Column(db.String(255), nullable=True)
     role = db.Column(db.String(20), nullable=False, default="USER")
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    is_deleted = db.Column(db.Boolean, nullable=False, default=False)
     created_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
 
     wallet = db.relationship("Wallet", back_populates="user", uselist=False, cascade="all, delete-orphan")
     tasks_created = db.relationship("Task", foreign_keys="Task.creator_id", back_populates="creator")
     tasks_assigned = db.relationship("Task", foreign_keys="Task.assigned_to", back_populates="performer")
     transactions = db.relationship("Transaction", back_populates="user")
+    applications = db.relationship("TaskApplication", back_populates="user", cascade="all, delete-orphan")
 
     def set_password(self, password: str) -> None:
         self.password_hash = generate_password_hash(password)
@@ -51,10 +54,26 @@ class Task(db.Model):
 
     creator = db.relationship("User", foreign_keys=[creator_id], back_populates="tasks_created")
     performer = db.relationship("User", foreign_keys=[assigned_to], back_populates="tasks_assigned")
+    applications = db.relationship("TaskApplication", back_populates="task", cascade="all, delete-orphan")
 
     @property
     def budget_decimal(self) -> Decimal:
         return Decimal(self.budget).quantize(Decimal("0.01"))
+
+
+class TaskApplication(db.Model):
+    __tablename__ = "task_applications"
+
+    id = db.Column(db.Integer, primary_key=True)
+    task_id = db.Column(db.Integer, db.ForeignKey("tasks.id"), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    status = db.Column(db.String(30), nullable=False, default="PENDING")
+    created_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    task = db.relationship("Task", back_populates="applications")
+    user = db.relationship("User", back_populates="applications")
+
+    __table_args__ = (db.UniqueConstraint("task_id", "user_id", name="uq_task_application_user"),)
 
 
 class Wallet(db.Model):

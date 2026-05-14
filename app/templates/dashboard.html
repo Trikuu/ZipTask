@@ -14,7 +14,7 @@
                 <div class="stat-card balance">
                     <i class="bi bi-wallet2"></i>
                     <span>Total Balance</span>
-                    <strong>₹{{ "%.2f"|format(g.current_user.wallet.balance) }}</strong>
+                    <strong>Rs. {{ "%.2f"|format(g.current_user.wallet.balance) }}</strong>
                 </div>
             </div>
             <div class="col-md-6 col-xl-3">
@@ -35,7 +35,7 @@
                 <div class="stat-card">
                     <i class="bi bi-lock-fill"></i>
                     <span>Locked Balance</span>
-                    <strong>₹{{ "%.2f"|format(g.current_user.wallet.locked_balance) }}</strong>
+                    <strong>Rs. {{ "%.2f"|format(g.current_user.wallet.locked_balance) }}</strong>
                 </div>
             </div>
         </div>
@@ -44,13 +44,26 @@
                 <div class="panel">
                     <h2 class="h5 fw-bold mb-3">Recent Tasks</h2>
                     {% for task in recent_tasks %}
-                        <div class="list-row">
-                            <div>
+                        <div class="list-row align-items-start">
+                            <div class="flex-grow-1">
                                 <strong>{{ task.title }}</strong>
-                                <p class="mb-0 text-muted">{{ task.status }} · {{ task.location }}</p>
+                                <p class="mb-0 text-muted">{{ task.status }} | {{ task.location }}</p>
+                                {% if task.creator_id == g.current_user.id and task.status == "REQUESTED" %}
+                                    <div class="applicant-list mt-3">
+                                        <span class="small fw-bold text-muted">Applicants</span>
+                                        {% for application in task.applications if application.status == "PENDING" %}
+                                            <form method="post" action="{{ url_for('tasks.assign_task', task_id=task.id, application_id=application.id) }}" class="applicant-row js-loading-form">
+                                                <span>{{ application.user.full_name }} <small>{{ application.user.email }}</small></span>
+                                                <button class="btn btn-sm gradient-btn" data-loading-text="Assigning...">Assign</button>
+                                            </form>
+                                        {% else %}
+                                            <p class="text-muted mb-0">No pending applicants.</p>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
                             </div>
                             <div class="text-end">
-                                <b>₹{{ "%.2f"|format(task.budget) }}</b>
+                                <b>Rs. {{ "%.2f"|format(task.budget) }}</b>
                                 {% if task.creator_id == g.current_user.id and task.status == "ASSIGNED" %}
                                     <form method="post" action="{{ url_for('tasks.complete_task', task_id=task.id) }}" class="mt-2 js-loading-form">
                                         <button class="btn btn-sm gradient-btn" data-loading-text="Completing...">Mark Complete</button>
@@ -72,7 +85,7 @@
                                 <strong>{{ txn.type.replace("_", " ").title() }}</strong>
                                 <p class="mb-0 text-muted">{{ txn.status }}</p>
                             </div>
-                            <b class="{{ 'text-success' if txn.amount >= 0 else 'text-danger' }}">₹{{ "%.2f"|format(txn.amount) }}</b>
+                            <b class="{{ 'text-success' if txn.amount >= 0 else 'text-danger' }}">Rs. {{ "%.2f"|format(txn.amount) }}</b>
                         </div>
                     {% else %}
                         <p class="text-muted mb-0">No transactions yet.</p>

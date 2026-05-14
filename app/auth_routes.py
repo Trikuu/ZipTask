@@ -1,9 +1,9 @@
-from flask import Blueprint, flash, g, make_response, redirect, render_template, request, url_for
+from flask import Blueprint, current_app, flash, g, make_response, redirect, render_template, request, url_for
 
 from .auth_utils import create_token
 from .extensions import db
 from .models import User
-from .services import ensure_wallet, validate_password
+from .services import ensure_wallet, send_password_reset_email, validate_password, verify_password_reset_token
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 
@@ -64,6 +64,9 @@ def login():
         if not user or not user.check_password(password):
             flash("Invalid email or password.", "danger")
             return render_template("auth/login.html")
+        if user.is_deleted or not user.is_active:
+            flash("Your account is inactive. Please contact admin.", "danger")
+            return render_template("auth/login.html")
 
         token = create_token(user)
         next_url = request.args.get("next") or url_for("admin.panel" if user.is_admin else "main.dashboard")
@@ -73,6 +76,60 @@ def login():
         return response
 
     return render_template("auth/login.html")
+
+
+@auth_bp.route("/forgot-password", methods=["GET", "POST"])
+def forgot_password():
+    if g.current_user:
+        return redirect(url_for("main.dashboard"))
+
+    if request.method == "POST":
+        email = request.form.get("email", "").strip().lower()
+        user = User.query.filter_by(email=email, is_deleted=False).first()
+        if not user or not user.is_active:
+            flash("Invalid email", "danger")
+            return render_template("auth/forgot_password.html")
+
+        try:
+            sent = send_password_reset_email(user)
+        except Exception:
+            current_app.logger.exception("Password reset email failed.")
+            sent = False
+
+        if not sent:
+            flash("Password reset email could not be sent. Please contact support.", "danger")
+            return render_template("auth/forgot_password.html")
+
+        flash("Password reset link sent to your email.", "success")
+        return redirect(url_for("auth.login"))
+
+    return render_template("auth/forgot_password.html")
+
+
+@auth_bp.route("/reset-password/<token>", methods=["GET", "POST"])
+def reset_password(token):
+    if g.current_user:
+        return redirect(url_for("main.dashboard"))
+
+    user, error = verify_password_reset_token(token)
+    if error:
+        flash(error, "danger")
+        return redirect(url_for("auth.forgot_password"))
+
+    if request.method == "POST":
+        password = request.form.get("password", "")
+        password_errors = validate_password(password)
+        if password_errors:
+            for item in password_errors:
+                flash(item, "danger")
+            return render_template("auth/reset_password.html", token=token)
+
+        user.set_password(password)
+        db.session.commit()
+        flash("Password reset successful", "success")
+        return redirect(url_for("auth.login"))
+
+    return render_template("auth/reset_password.html", token=token)
 
 
 @auth_bp.route("/logout", methods=["POST"])
