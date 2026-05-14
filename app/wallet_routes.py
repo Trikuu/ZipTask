@@ -98,6 +98,8 @@ def verify_payment():
         return jsonify({"message": "Payment already credited"})
 
     g.current_user.wallet.balance += amount
+    if g.current_user.wallet.balance >= 0:
+        g.current_user.has_pending_dues = False
     pending.status = "SUCCESS"
     record_transaction(g.current_user.id, amount, "WALLET_TOPUP", "SUCCESS", reference=payment_id)
     db.session.commit()

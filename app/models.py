@@ -18,6 +18,8 @@ class User(db.Model):
     role = db.Column(db.String(20), nullable=False, default="USER")
     is_active = db.Column(db.Boolean, nullable=False, default=True)
     is_deleted = db.Column(db.Boolean, nullable=False, default=False)
+    is_frozen = db.Column(db.Boolean, nullable=False, default=False)
+    has_pending_dues = db.Column(db.Boolean, nullable=False, default=False)
     created_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
 
     wallet = db.relationship("Wallet", back_populates="user", uselist=False, cascade="all, delete-orphan")
@@ -25,6 +27,7 @@ class User(db.Model):
     tasks_assigned = db.relationship("Task", foreign_keys="Task.assigned_to", back_populates="performer")
     transactions = db.relationship("Transaction", back_populates="user")
     applications = db.relationship("TaskApplication", back_populates="user", cascade="all, delete-orphan")
+    chat_messages = db.relationship("ChatMessage", back_populates="sender")
 
     def set_password(self, password: str) -> None:
         self.password_hash = generate_password_hash(password)
@@ -48,6 +51,15 @@ class Task(db.Model):
     budget = db.Column(db.Numeric(10, 2), nullable=False)
     location = db.Column(db.String(160), nullable=False)
     status = db.Column(db.String(30), nullable=False, default="OPEN")
+    agreed_price = db.Column(db.Numeric(10, 2), nullable=True)
+    proposed_price = db.Column(db.Numeric(10, 2), nullable=True)
+    negotiation_status = db.Column(db.String(30), nullable=False, default="NONE")
+    completion_image = db.Column(db.String(255), nullable=True)
+    external_payment_requested = db.Column(db.Boolean, nullable=False, default=False)
+    creator_external_confirmed = db.Column(db.Boolean, nullable=False, default=False)
+    performer_external_confirmed = db.Column(db.Boolean, nullable=False, default=False)
+    payment_mode = db.Column(db.String(30), nullable=False, default="WALLET")
+    dispute_status = db.Column(db.String(30), nullable=False, default="NONE")
     created_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     assigned_at = db.Column(db.DateTime(timezone=True), nullable=True)
     completed_at = db.Column(db.DateTime(timezone=True), nullable=True)
@@ -55,10 +67,16 @@ class Task(db.Model):
     creator = db.relationship("User", foreign_keys=[creator_id], back_populates="tasks_created")
     performer = db.relationship("User", foreign_keys=[assigned_to], back_populates="tasks_assigned")
     applications = db.relationship("TaskApplication", back_populates="task", cascade="all, delete-orphan")
+    chat_messages = db.relationship("ChatMessage", back_populates="task", cascade="all, delete-orphan")
 
     @property
     def budget_decimal(self) -> Decimal:
         return Decimal(self.budget).quantize(Decimal("0.01"))
+
+    @property
+    def agreed_price_decimal(self) -> Decimal:
+        value = self.agreed_price if self.agreed_price is not None else self.budget
+        return Decimal(value).quantize(Decimal("0.01"))
 
 
 class TaskApplication(db.Model):
@@ -105,3 +123,16 @@ class Transaction(db.Model):
 
     user = db.relationship("User", back_populates="transactions")
     task = db.relationship("Task")
+
+
+class ChatMessage(db.Model):
+    __tablename__ = "chat_messages"
+
+    id = db.Column(db.Integer, primary_key=True)
+    task_id = db.Column(db.Integer, db.ForeignKey("tasks.id"), nullable=False, index=True)
+    sender_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    message = db.Column(db.Text, nullable=False)
+    timestamp = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    task = db.relationship("Task", back_populates="chat_messages")
+    sender = db.relationship("User", back_populates="chat_messages")

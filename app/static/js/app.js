@@ -91,3 +91,61 @@ if (walletForm) {
         checkout.open();
     });
 }
+
+const chatMessages = document.getElementById("chatMessages");
+const chatForm = document.getElementById("chatForm");
+let lastChatId = 0;
+
+function renderChatMessage(item) {
+    const wrapper = document.createElement("div");
+    wrapper.className = `message-bubble ${item.mine ? "mine" : ""}`;
+    const card = document.createElement("div");
+    card.className = "message-card";
+    const meta = document.createElement("span");
+    meta.className = "message-meta";
+    meta.textContent = `${item.sender_name} · ${item.timestamp}`;
+    const body = document.createElement("div");
+    body.textContent = item.message;
+    card.append(meta, body);
+    wrapper.appendChild(card);
+    return wrapper;
+}
+
+async function loadChatMessages() {
+    if (!chatMessages) {
+        return;
+    }
+    const taskId = chatMessages.dataset.taskId;
+    const response = await fetch(`/chat/tasks/${taskId}/messages?after_id=${lastChatId}`);
+    if (!response.ok) {
+        return;
+    }
+    const data = await response.json();
+    data.messages.forEach((item) => {
+        chatMessages.appendChild(renderChatMessage(item));
+        lastChatId = Math.max(lastChatId, item.id);
+    });
+    if (data.messages.length) {
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+}
+
+if (chatMessages && chatForm) {
+    loadChatMessages();
+    setInterval(loadChatMessages, 3500);
+    chatForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const input = chatForm.querySelector("input[name='message']");
+        const taskId = chatMessages.dataset.taskId;
+        const formData = new FormData();
+        formData.append("message", input.value);
+        const response = await fetch(`/chat/tasks/${taskId}/messages`, {
+            method: "POST",
+            body: formData
+        });
+        if (response.ok) {
+            input.value = "";
+            await loadChatMessages();
+        }
+    });
+}

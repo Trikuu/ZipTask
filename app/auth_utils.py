@@ -30,7 +30,7 @@ def load_user_from_cookie() -> None:
     except (jwt.PyJWTError, KeyError, ValueError):
         return
     user = User.query.get(user_id)
-    if user and user.is_active and not user.is_deleted:
+    if user and user.is_active and not user.is_deleted and not user.is_frozen:
         g.current_user = user
 
 

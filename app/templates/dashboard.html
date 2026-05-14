@@ -9,35 +9,14 @@
                 <h1 class="h2 fw-bold">Dashboard</h1>
             </div>
         </div>
+        {% if g.current_user.has_pending_dues %}
+            <div class="alert alert-warning shadow-sm"><i class="bi bi-exclamation-triangle-fill me-1"></i>Payment pending. Add wallet money or contact admin to clear dues.</div>
+        {% endif %}
         <div class="row g-4 mb-4">
-            <div class="col-md-6 col-xl-3">
-                <div class="stat-card balance">
-                    <i class="bi bi-wallet2"></i>
-                    <span>Total Balance</span>
-                    <strong>Rs. {{ "%.2f"|format(g.current_user.wallet.balance) }}</strong>
-                </div>
-            </div>
-            <div class="col-md-6 col-xl-3">
-                <div class="stat-card">
-                    <i class="bi bi-lightning-charge-fill"></i>
-                    <span>Active Tasks</span>
-                    <strong>{{ active_tasks }}</strong>
-                </div>
-            </div>
-            <div class="col-md-6 col-xl-3">
-                <div class="stat-card">
-                    <i class="bi bi-check2-circle"></i>
-                    <span>Completed Tasks</span>
-                    <strong>{{ completed_tasks }}</strong>
-                </div>
-            </div>
-            <div class="col-md-6 col-xl-3">
-                <div class="stat-card">
-                    <i class="bi bi-lock-fill"></i>
-                    <span>Locked Balance</span>
-                    <strong>Rs. {{ "%.2f"|format(g.current_user.wallet.locked_balance) }}</strong>
-                </div>
-            </div>
+            <div class="col-md-6 col-xl-3"><div class="stat-card balance"><i class="bi bi-wallet2"></i><span>Total Balance</span><strong>Rs. {{ "%.2f"|format(g.current_user.wallet.balance) }}</strong></div></div>
+            <div class="col-md-6 col-xl-3"><div class="stat-card"><i class="bi bi-lightning-charge-fill"></i><span>Active Tasks</span><strong>{{ active_tasks }}</strong></div></div>
+            <div class="col-md-6 col-xl-3"><div class="stat-card"><i class="bi bi-check2-circle"></i><span>Completed Tasks</span><strong>{{ completed_tasks }}</strong></div></div>
+            <div class="col-md-6 col-xl-3"><div class="stat-card"><i class="bi bi-lock-fill"></i><span>Locked Balance</span><strong>Rs. {{ "%.2f"|format(g.current_user.wallet.locked_balance) }}</strong></div></div>
         </div>
         <div class="row g-4">
             <div class="col-lg-7">
@@ -46,10 +25,18 @@
                     {% for task in recent_tasks %}
                         <div class="list-row align-items-start">
                             <div class="flex-grow-1">
-                                <strong>{{ task.title }}</strong>
-                                <p class="mb-0 text-muted">{{ task.status }} | {{ task.location }}</p>
+                                <div class="d-flex flex-wrap gap-2 align-items-center">
+                                    <strong>{{ task.title }}</strong>
+                                    <span class="badge status-badge">{{ task.status }}</span>
+                                </div>
+                                <p class="mb-2 text-muted">{{ task.location }} | Agreed: Rs. {{ "%.2f"|format(task.agreed_price or task.budget) }}</p>
+
+                                {% if task.assigned_to and g.current_user.id in [task.creator_id, task.assigned_to] %}
+                                    <a class="btn btn-sm btn-outline-primary mb-2" href="{{ url_for('chat.task_chat', task_id=task.id) }}"><i class="bi bi-chat-dots"></i> Chat</a>
+                                {% endif %}
+
                                 {% if task.creator_id == g.current_user.id and task.status == "REQUESTED" %}
-                                    <div class="applicant-list mt-3">
+                                    <div class="applicant-list mt-2">
                                         <span class="small fw-bold text-muted">Applicants</span>
                                         {% for application in task.applications if application.status == "PENDING" %}
                                             <form method="post" action="{{ url_for('tasks.assign_task', task_id=task.id, application_id=application.id) }}" class="applicant-row js-loading-form">
@@ -61,15 +48,59 @@
                                         {% endfor %}
                                     </div>
                                 {% endif %}
-                            </div>
-                            <div class="text-end">
-                                <b>Rs. {{ "%.2f"|format(task.budget) }}</b>
-                                {% if task.creator_id == g.current_user.id and task.status == "ASSIGNED" %}
-                                    <form method="post" action="{{ url_for('tasks.complete_task', task_id=task.id) }}" class="mt-2 js-loading-form">
-                                        <button class="btn btn-sm gradient-btn" data-loading-text="Completing...">Mark Complete</button>
+
+                                {% if task.assigned_to == g.current_user.id and task.status in ["ASSIGNED", "NEGOTIATING"] %}
+                                    <form method="post" action="{{ url_for('tasks.propose_price', task_id=task.id) }}" class="row g-2 align-items-end mt-2 js-loading-form">
+                                        <div class="col-8">
+                                            <label class="form-label small">Propose updated price</label>
+                                            <input class="form-control form-control-sm" type="number" name="proposed_price" min="1" step="0.01" required>
+                                        </div>
+                                        <div class="col-4 d-grid"><button class="btn btn-sm btn-outline-primary" data-loading-text="Sending...">Propose</button></div>
+                                    </form>
+                                {% endif %}
+
+                                {% if task.creator_id == g.current_user.id and task.status == "NEGOTIATING" and task.negotiation_status == "PENDING" %}
+                                    <div class="applicant-list mt-2">
+                                        <strong>Proposed price: Rs. {{ "%.2f"|format(task.proposed_price) }}</strong>
+                                        <div class="d-flex gap-2 mt-2">
+                                            <form method="post" action="{{ url_for('tasks.review_negotiation', task_id=task.id, decision='accept') }}" class="js-loading-form"><button class="btn btn-sm gradient-btn">Accept</button></form>
+                                            <form method="post" action="{{ url_for('tasks.review_negotiation', task_id=task.id, decision='reject') }}" class="js-loading-form"><button class="btn btn-sm btn-outline-danger">Reject</button></form>
+                                        </div>
+                                    </div>
+                                {% endif %}
+
+                                {% if task.assigned_to == g.current_user.id and task.status == "ASSIGNED" %}
+                                    <form method="post" action="{{ url_for('tasks.commit_task', task_id=task.id) }}" enctype="multipart/form-data" class="mt-3 js-loading-form">
+                                        <label class="form-label small">Proof image</label>
+                                        <input class="form-control form-control-sm mb-2" type="file" name="completion_image" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" required>
+                                        <button class="btn btn-sm gradient-btn" data-loading-text="Submitting...">Commit Task</button>
+                                    </form>
+                                {% endif %}
+
+                                {% if task.creator_id == g.current_user.id and task.status == "UNDER_REVIEW" %}
+                                    <div class="applicant-list mt-2">
+                                        <strong>Proof submitted</strong>
+                                        {% if task.completion_image %}
+                                            <a class="d-block mt-1" href="{{ url_for('static', filename=task.completion_image) }}" target="_blank">View proof image</a>
+                                        {% endif %}
+                                        <div class="d-flex gap-2 mt-2">
+                                            <form method="post" action="{{ url_for('tasks.review_completion', task_id=task.id, decision='accept') }}" class="js-loading-form"><button class="btn btn-sm gradient-btn">Accept & Complete</button></form>
+                                            <form method="post" action="{{ url_for('tasks.review_completion', task_id=task.id, decision='reject') }}" class="js-loading-form"><button class="btn btn-sm btn-outline-danger">Reject</button></form>
+                                        </div>
+                                    </div>
+                                {% endif %}
+
+                                {% if task.status in ["ASSIGNED", "UNDER_REVIEW"] and g.current_user.id in [task.creator_id, task.assigned_to] %}
+                                    <form method="post" action="{{ url_for('tasks.confirm_external_payment', task_id=task.id) }}" class="mt-2 js-loading-form">
+                                        <button class="btn btn-sm btn-outline-secondary" data-loading-text="Confirming...">
+                                            Mark as Paid Externally
+                                            {% if g.current_user.id == task.creator_id and task.creator_external_confirmed %}(Confirmed){% endif %}
+                                            {% if g.current_user.id == task.assigned_to and task.performer_external_confirmed %}(Confirmed){% endif %}
+                                        </button>
                                     </form>
                                 {% endif %}
                             </div>
+                            <div class="text-end"><b>Rs. {{ "%.2f"|format(task.agreed_price or task.budget) }}</b></div>
                         </div>
                     {% else %}
                         <p class="text-muted mb-0">No tasks yet.</p>
@@ -81,10 +112,7 @@
                     <h2 class="h5 fw-bold mb-3">Recent Transactions</h2>
                     {% for txn in recent_transactions %}
                         <div class="list-row">
-                            <div>
-                                <strong>{{ txn.type.replace("_", " ").title() }}</strong>
-                                <p class="mb-0 text-muted">{{ txn.status }}</p>
-                            </div>
+                            <div><strong>{{ txn.type.replace("_", " ").title() }}</strong><p class="mb-0 text-muted">{{ txn.status }}</p></div>
                             <b class="{{ 'text-success' if txn.amount >= 0 else 'text-danger' }}">Rs. {{ "%.2f"|format(txn.amount) }}</b>
                         </div>
                     {% else %}

@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Task Chat - ZipTask{% endblock %}
+{% block content %}
+<section class="page-section">
+    <div class="container">
+        <div class="d-flex flex-column flex-md-row justify-content-between gap-3 mb-4">
+            <div>
+                <p class="eyebrow text-purple mb-1">Assigned task chat</p>
+                <h1 class="h3 fw-bold">{{ task.title }}</h1>
+            </div>
+            <span class="badge status-badge align-self-start">{{ task.status }}</span>
+        </div>
+        <div class="chat-shell panel">
+            <div id="chatMessages" class="chat-messages" data-task-id="{{ task.id }}" data-current-user="{{ g.current_user.id }}"></div>
+            <form id="chatForm" class="chat-form">
+                <input class="form-control" name="message" placeholder="Type a message..." maxlength="2000" autocomplete="off" required>
+                <button class="btn gradient-btn" type="submit">Send</button>
+            </form>
+        </div>
+    </div>
+</section>
+{% endblock %}

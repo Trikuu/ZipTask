@@ -30,7 +30,7 @@ def dashboard():
     )
     active_tasks = Task.query.filter(
         ((Task.creator_id == user_id) | (Task.assigned_to == user_id)),
-        Task.status.in_(["OPEN", "REQUESTED", "ASSIGNED"]),
+        Task.status.in_(["OPEN", "REQUESTED", "ASSIGNED", "NEGOTIATING", "UNDER_REVIEW"]),
     ).count()
     completed_tasks = Task.query.filter(
         ((Task.creator_id == user_id) | (Task.assigned_to == user_id)),

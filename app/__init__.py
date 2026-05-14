@@ -18,6 +18,7 @@ def create_app(config_class=Config):
     from . import models
     from .admin_routes import admin_bp
     from .auth_routes import auth_bp
+    from .chat_routes import chat_bp
     from .main_routes import main_bp
     from .profile_routes import profile_bp
     from .task_routes import task_bp
@@ -25,6 +26,7 @@ def create_app(config_class=Config):
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp)
+    app.register_blueprint(chat_bp)
     app.register_blueprint(profile_bp)
     app.register_blueprint(task_bp)
     app.register_blueprint(wallet_bp)

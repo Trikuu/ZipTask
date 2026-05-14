@@ -12,6 +12,8 @@
                 <a class="{{ 'active' if status == 'OPEN' else '' }}" href="{{ url_for('tasks.browse', status='OPEN') }}">Open</a>
                 <a class="{{ 'active' if status == 'REQUESTED' else '' }}" href="{{ url_for('tasks.browse', status='REQUESTED') }}">Requested</a>
                 <a class="{{ 'active' if status == 'ASSIGNED' else '' }}" href="{{ url_for('tasks.browse', status='ASSIGNED') }}">Assigned</a>
+                <a class="{{ 'active' if status == 'NEGOTIATING' else '' }}" href="{{ url_for('tasks.browse', status='NEGOTIATING') }}">Negotiating</a>
+                <a class="{{ 'active' if status == 'UNDER_REVIEW' else '' }}" href="{{ url_for('tasks.browse', status='UNDER_REVIEW') }}">Under Review</a>
                 <a class="{{ 'active' if status == 'COMPLETED' else '' }}" href="{{ url_for('tasks.browse', status='COMPLETED') }}">Completed</a>
             </div>
         </div>

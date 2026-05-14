@@ -5,7 +5,7 @@ from flask import Blueprint, flash, g, redirect, render_template, request, url_f
 
 from .auth_utils import admin_required
 from .extensions import db
-from .models import Task, Transaction, User
+from .models import ChatMessage, Task, Transaction, User
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -25,7 +25,7 @@ def panel():
     if user_id:
         tasks_query = tasks_query.filter((Task.creator_id == user_id) | (Task.assigned_to == user_id))
         tx_query = tx_query.filter(Transaction.user_id == user_id)
-    if status in {"OPEN", "REQUESTED", "ASSIGNED", "COMPLETED"}:
+    if status in {"OPEN", "REQUESTED", "ASSIGNED", "NEGOTIATING", "UNDER_REVIEW", "COMPLETED"}:
         tasks_query = tasks_query.filter(Task.status == status)
 
     start_dt = parse_date_start(date_from)
@@ -39,6 +39,9 @@ def panel():
 
     tasks = tasks_query.order_by(Task.created_at.desc()).all()
     transactions = tx_query.order_by(Transaction.created_at.desc()).limit(200).all()
+    chats = ChatMessage.query.order_by(ChatMessage.timestamp.desc()).limit(100).all()
+    proof_tasks = Task.query.filter(Task.completion_image.isnot(None)).order_by(Task.created_at.desc()).limit(100).all()
+    negative_users = [user for user in users if user.wallet and user.wallet.balance < 0]
     total_earnings = (
         Transaction.query.with_entities(func.coalesce(func.sum(Transaction.amount), 0))
         .filter(Transaction.type == "PLATFORM_FEE_5_PERCENT", Transaction.status == "SUCCESS")
@@ -51,6 +54,9 @@ def panel():
         transactions=transactions,
         total_earnings=total_earnings,
         filters={"user_id": user_id, "status": status, "date_from": date_from, "date_to": date_to},
+        chats=chats,
+        proof_tasks=proof_tasks,
+        negative_users=negative_users,
     )
 
 
@@ -86,6 +92,50 @@ def delete_user(user_id):
     user.is_deleted = True
     db.session.commit()
     flash("User deleted", "success")
+    return redirect(url_for("admin.panel"))
+
+
+@admin_bp.route("/users/<int:user_id>/freeze", methods=["POST"])
+@admin_required
+def freeze_user(user_id):
+    user = User.query.get_or_404(user_id)
+    if user.id == g.current_user.id or user.is_admin:
+        flash("Protected accounts cannot be frozen.", "danger")
+        return redirect(url_for("admin.panel"))
+    user.is_frozen = not user.is_frozen
+    db.session.commit()
+    flash("User frozen" if user.is_frozen else "User unfrozen", "success")
+    return redirect(url_for("admin.panel"))
+
+
+@admin_bp.route("/users/<int:user_id>/clear-dues", methods=["POST"])
+@admin_required
+def clear_dues(user_id):
+    user = User.query.get_or_404(user_id)
+    if user.wallet and user.wallet.balance < 0:
+        record = Transaction(user_id=user.id, amount=abs(user.wallet.balance), type="ADMIN_DUES_CLEARED", status="SUCCESS")
+        db.session.add(record)
+        user.wallet.balance = 0
+    user.has_pending_dues = False
+    db.session.commit()
+    flash("User dues cleared", "success")
+    return redirect(url_for("admin.panel"))
+
+
+@admin_bp.route("/tasks/<int:task_id>/dispute/<decision>", methods=["POST"])
+@admin_required
+def resolve_dispute(task_id, decision):
+    task = Task.query.get_or_404(task_id)
+    if decision == "approve":
+        task.dispute_status = "APPROVED_BY_ADMIN"
+        flash("Dispute approved", "success")
+    elif decision == "reject":
+        task.dispute_status = "REJECTED_BY_ADMIN"
+        flash("Dispute rejected", "success")
+    else:
+        flash("Invalid dispute action.", "danger")
+        return redirect(url_for("admin.panel"))
+    db.session.commit()
     return redirect(url_for("admin.panel"))
 
 
