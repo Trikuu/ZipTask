@@ -8,8 +8,8 @@ from alembic import op
 import sqlalchemy as sa
 
 
-revision = "0003_admin_user_status_and_task_applications"
-down_revision = "0002_add_user_profile_image"
+revision = "0003"
+down_revision = "0002"
 branch_labels = None
 depends_on = None
 
