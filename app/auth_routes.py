@@ -64,7 +64,7 @@ def login():
         if not user or not user.check_password(password):
             flash("Invalid email or password.", "danger")
             return render_template("auth/login.html")
-        if user.is_deleted or not user.is_active or user.is_frozen:
+        if user.is_deleted or user.is_frozen or user.is_active is False:
             flash("Your account is inactive. Please contact admin.", "danger")
             return render_template("auth/login.html")
 
