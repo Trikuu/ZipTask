@@ -1,11 +1,9 @@
 from flask import Flask
-from sqlalchemy import inspect
 import os
 
 from config import Config
-
 from .auth_utils import load_user_from_cookie
-from .extensions import db, migrate
+from .extensions import db
 from .services import bootstrap_admin
 
 
@@ -15,19 +13,14 @@ def create_app(config_class=Config):
     # Load config
     app.config.from_object(config_class)
 
-    # ✅ FIX DATABASE URL DRIVER
+    # Database URL (simple, no driver tricks)
     db_url = os.getenv("DATABASE_URL")
-
-    if db_url and db_url.startswith("postgresql://"):
-        db_url = db_url.replace("postgresql://", "postgresql+psycopg://", 1)
-
     app.config["SQLALCHEMY_DATABASE_URI"] = db_url
 
-    # Init extensions
+    # Init DB
     db.init_app(app)
-    migrate.init_app(app, db)
 
-    # Import models
+    # Import models (IMPORTANT for create_all)
     from . import models
 
     # Register blueprints
@@ -56,22 +49,9 @@ def create_app(config_class=Config):
         bootstrap_admin()
         print("Admin account is ready.")
 
-    # Auto bootstrap admin if DB ready
+    # ✅ CLEAN DB SETUP (NO MIGRATIONS)
     with app.app_context():
-    try:
-        if inspect(db.engine).has_table("users"):
-
-            # 🔥 AUTO FIX MISSING COLUMNS
-            with db.engine.connect() as conn:
-                conn.execute(db.text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE"))
-                conn.execute(db.text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE"))
-                conn.execute(db.text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_frozen BOOLEAN DEFAULT FALSE"))
-                conn.execute(db.text("ALTER TABLE users ADD COLUMN IF NOT EXISTS has_pending_dues BOOLEAN DEFAULT FALSE"))
-                conn.commit()
-
-            bootstrap_admin()
-
-    except Exception as exc:
-        app.logger.warning("Admin bootstrap skipped until database is ready: %s", exc)
+        db.create_all()
+        bootstrap_admin()
 
     return app
