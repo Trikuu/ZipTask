@@ -178,25 +178,45 @@ def bootstrap_admin() -> None:
     email = current_app.config["DEFAULT_ADMIN_EMAIL"].strip().lower()
     password = current_app.config["DEFAULT_ADMIN_PASSWORD"]
     phone = current_app.config["DEFAULT_ADMIN_PHONE"].strip()
+
     if not email or not password or not phone:
-        raise RuntimeError("DEFAULT_ADMIN_EMAIL, DEFAULT_ADMIN_PASSWORD and DEFAULT_ADMIN_PHONE must be configured.")
+        raise RuntimeError(
+            "DEFAULT_ADMIN_EMAIL, DEFAULT_ADMIN_PASSWORD and DEFAULT_ADMIN_PHONE must be configured."
+        )
 
     admin = User.query.filter_by(email=email).first()
+
+    # ✅ FIXED BLOCK
     if admin:
-        if admin.role != "ADMIN":
-            admin.role = "ADMIN"
+        admin.role = "ADMIN"
         admin.phone = phone
         admin.is_active = True
         admin.is_deleted = False
+
+        # 🔥 IMPORTANT FIX
+        admin.set_password(password)
+
         ensure_wallet(admin)
         db.session.commit()
         return
 
-    admin = User(full_name="ZipTask Admin", email=email, phone=phone, role="ADMIN")
+    # ✅ CREATE NEW ADMIN
+    admin = User(
+        full_name="ZipTask Admin",
+        email=email,
+        phone=phone,
+        role="ADMIN",
+        is_active=True,
+        is_deleted=False,
+    )
+
     admin.set_password(password)
+
     db.session.add(admin)
     db.session.flush()
+
     ensure_wallet(admin)
+
     try:
         db.session.commit()
     except IntegrityError:
@@ -204,6 +224,7 @@ def bootstrap_admin() -> None:
         admin = User.query.filter_by(email=email).first()
         if admin:
             admin.role = "ADMIN"
+            admin.set_password(password)  # 🔥 also fix here
             ensure_wallet(admin)
             db.session.commit()
 
