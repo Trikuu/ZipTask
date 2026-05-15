@@ -184,23 +184,13 @@ def bootstrap_admin() -> None:
             "DEFAULT_ADMIN_EMAIL, DEFAULT_ADMIN_PASSWORD and DEFAULT_ADMIN_PHONE must be configured."
         )
 
-    admin = User.query.filter_by(email=email).first()
-
-    # ✅ FIXED BLOCK
-    if admin:
-        admin.role = "ADMIN"
-        admin.phone = phone
-        admin.is_active = True
-        admin.is_deleted = False
-
-        # 🔥 IMPORTANT FIX
-        admin.set_password(password)
-
-        ensure_wallet(admin)
+    # 🔥 DELETE existing admin completely
+    existing = User.query.filter_by(email=email).first()
+    if existing:
+        db.session.delete(existing)
         db.session.commit()
-        return
 
-    # ✅ CREATE NEW ADMIN
+    # 🔥 CREATE fresh admin
     admin = User(
         full_name="ZipTask Admin",
         email=email,
@@ -217,16 +207,7 @@ def bootstrap_admin() -> None:
 
     ensure_wallet(admin)
 
-    try:
-        db.session.commit()
-    except IntegrityError:
-        db.session.rollback()
-        admin = User.query.filter_by(email=email).first()
-        if admin:
-            admin.role = "ADMIN"
-            admin.set_password(password)  # 🔥 also fix here
-            ensure_wallet(admin)
-            db.session.commit()
+    db.session.commit()
 
 
 def record_transaction(user_id: int, amount, txn_type: str, status: str = "SUCCESS", task_id: int | None = None, reference: str | None = None) -> Transaction:
