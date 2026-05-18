@@ -4,7 +4,9 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-load_dotenv()
+# Load .env only for local (safe)
+if os.getenv("RAILWAY_ENVIRONMENT") is None:
+    load_dotenv()
 
 
 def env_bool(name: str, default: str = "false") -> bool:
@@ -18,20 +20,8 @@ class Config:
     SECRET_KEY = os.getenv("SECRET_KEY")
     JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY") or SECRET_KEY
 
-    # 🔥 DATABASE (FINAL FIX)
-    DATABASE_URL = os.getenv("DATABASE_URL")
-
-    if not DATABASE_URL:
-        raise RuntimeError("DATABASE_URL must be set")
-
-    # Convert Railway URL automatically
-    if DATABASE_URL.startswith("postgresql://"):
-        DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg://", 1)
-
-    if DATABASE_URL.startswith("postgres://"):
-        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg://", 1)
-
-    SQLALCHEMY_DATABASE_URI = DATABASE_URL
+    # 🔥 DATABASE (SAFE VERSION)
+    SQLALCHEMY_DATABASE_URI = None  # set later
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     SQLALCHEMY_ENGINE_OPTIONS = {
@@ -71,9 +61,25 @@ class Config:
     MAIL_USE_TLS = env_bool("MAIL_USE_TLS", "true")
 
     @classmethod
+    def get_database_uri(cls):
+        db_url = os.getenv("DATABASE_URL")
+
+        if not db_url:
+            raise RuntimeError("DATABASE_URL must be set")
+
+        # Convert Railway URL
+        if db_url.startswith("postgresql://"):
+            db_url = db_url.replace("postgresql://", "postgresql+psycopg://", 1)
+
+        if db_url.startswith("postgres://"):
+            db_url = db_url.replace("postgres://", "postgresql+psycopg://", 1)
+
+        return db_url
+
+    @classmethod
     def validate(cls) -> None:
         required = {
-            "DATABASE_URL": cls.DATABASE_URL,
+            "DATABASE_URL": os.getenv("DATABASE_URL"),
             "SECRET_KEY": cls.SECRET_KEY,
             "DEFAULT_ADMIN_EMAIL": cls.DEFAULT_ADMIN_EMAIL,
             "DEFAULT_ADMIN_PASSWORD": cls.DEFAULT_ADMIN_PASSWORD,

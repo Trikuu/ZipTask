@@ -17,6 +17,7 @@ def create_app(config_class=Config):
 
     # Load config
     app.config.from_object(config_class)
+    app.config["SQLALCHEMY_DATABASE_URI"] = config_class.get_database_uri()
 
     if hasattr(config_class, "validate"):
         config_class.validate()
