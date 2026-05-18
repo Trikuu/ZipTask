@@ -7,3 +7,4 @@ python-dotenv==1.0.1
 PyJWT==2.9.0
 email-validator==2.2.0
 razorpay==1.4.2
+setuptools==80.9.0
