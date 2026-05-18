@@ -1,4 +1,5 @@
 import logging
+import os
 
 from flask import Flask, jsonify
 from sqlalchemy import text
@@ -13,17 +14,24 @@ from .services import bootstrap_admin
 
 def create_app(config_class=Config):
     app = Flask(__name__)
+
+    # Load config
     app.config.from_object(config_class)
+
     if hasattr(config_class, "validate"):
         config_class.validate()
 
     configure_logging(app)
     configure_database_engine(app)
 
+    # Init extensions
     db.init_app(app)
     migrate.init_app(app, db)
 
+    # Import models
     from . import models
+
+    # Register blueprints
     from .admin_routes import admin_bp
     from .auth_routes import auth_bp
     from .chat_routes import chat_bp
@@ -40,6 +48,7 @@ def create_app(config_class=Config):
     app.register_blueprint(wallet_bp)
     app.register_blueprint(admin_bp)
 
+    # Middleware
     app.before_request(load_user_from_cookie)
     app.after_request(clear_invalid_auth_cookie)
 
@@ -74,11 +83,24 @@ def create_app(config_class=Config):
 
 
 def configure_database_engine(app: Flask) -> None:
-    uri = app.config["SQLALCHEMY_DATABASE_URI"]
-    if not uri.startswith("postgresql+psycopg://"):
-        raise RuntimeError("DATABASE_URL must be a PostgreSQL URL using the psycopg driver.")
+    """
+    Fix Railway DATABASE_URL automatically.
+    """
+    db_url = os.getenv("DATABASE_URL")
+
+    if not db_url:
+        raise RuntimeError("DATABASE_URL must be set")
+
+    # 🔥 IMPORTANT FIX: Convert Railway URL
+    if db_url.startswith("postgresql://"):
+        db_url = db_url.replace("postgresql://", "postgresql+psycopg://", 1)
+
+    app.config["SQLALCHEMY_DATABASE_URI"] = db_url
 
 
 def configure_logging(app: Flask) -> None:
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s"
+    )
     app.logger.setLevel(logging.INFO)
