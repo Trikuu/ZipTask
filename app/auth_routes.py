@@ -1,4 +1,7 @@
+from datetime import datetime, timedelta, timezone
+
 from flask import Blueprint, current_app, flash, g, make_response, redirect, render_template, request, url_for
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from .auth_utils import create_token
 from .extensions import db
@@ -6,6 +9,25 @@ from .models import User
 from .services import ensure_wallet, send_password_reset_email, validate_password, verify_password_reset_token
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
+
+LOGIN_ATTEMPTS: dict[str, list[datetime]] = {}
+MAX_LOGIN_ATTEMPTS = 5
+LOGIN_WINDOW = timedelta(minutes=10)
+
+
+def login_rate_limited(key: str) -> bool:
+    now = datetime.now(timezone.utc)
+    attempts = [item for item in LOGIN_ATTEMPTS.get(key, []) if now - item < LOGIN_WINDOW]
+    LOGIN_ATTEMPTS[key] = attempts
+    return len(attempts) >= MAX_LOGIN_ATTEMPTS
+
+
+def record_login_failure(key: str) -> None:
+    LOGIN_ATTEMPTS.setdefault(key, []).append(datetime.now(timezone.utc))
+
+
+def clear_login_failures(key: str) -> None:
+    LOGIN_ATTEMPTS.pop(key, None)
 
 
 @auth_bp.route("/signup", methods=["GET", "POST"])
@@ -32,19 +54,30 @@ def signup():
         if not accepted_privacy or not accepted_terms:
             flash("You must accept the Privacy Policy and Terms & Conditions.", "danger")
             return render_template("auth/signup.html")
-        if User.query.filter_by(email=email).first():
-            flash("Email is already registered.", "danger")
-            return render_template("auth/signup.html")
-        if User.query.filter_by(phone=phone).first():
-            flash("Phone number is already registered.", "danger")
-            return render_template("auth/signup.html")
+        try:
+            if User.query.filter_by(email=email).first():
+                flash("Email is already registered.", "danger")
+                return render_template("auth/signup.html")
+            if User.query.filter_by(phone=phone).first():
+                flash("Phone number is already registered.", "danger")
+                return render_template("auth/signup.html")
 
-        user = User(full_name=full_name, email=email, phone=phone, role="USER")
-        user.set_password(password)
-        db.session.add(user)
-        db.session.flush()
-        ensure_wallet(user)
-        db.session.commit()
+            user = User(full_name=full_name, email=email, phone=phone, role="USER")
+            user.set_password(password)
+            db.session.add(user)
+            db.session.flush()
+            ensure_wallet(user)
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            current_app.logger.exception("Duplicate signup prevented for email=%s phone=%s", email, phone)
+            flash("Email or phone number is already registered.", "danger")
+            return render_template("auth/signup.html")
+        except SQLAlchemyError:
+            db.session.rollback()
+            current_app.logger.exception("Database error during signup.")
+            flash("Database temporarily unavailable. Please try again.", "danger")
+            return render_template("auth/signup.html")
         flash("Account created successfully. Please login.", "success")
         return redirect(url_for("auth.login"))
 
@@ -59,19 +92,39 @@ def login():
     if request.method == "POST":
         email = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "")
-        user = User.query.filter_by(email=email).first()
+        rate_key = f"{request.remote_addr}:{email}"
+        if login_rate_limited(rate_key):
+            flash("Too many login attempts. Please try again later.", "danger")
+            return render_template("auth/login.html")
+
+        try:
+            user = User.query.filter_by(email=email).first()
+        except SQLAlchemyError:
+            current_app.logger.exception("Database error during login lookup.")
+            flash("Database temporarily unavailable. Please try again.", "danger")
+            return render_template("auth/login.html")
 
         if not user or not user.check_password(password):
+            record_login_failure(rate_key)
             flash("Invalid email or password.", "danger")
             return render_template("auth/login.html")
         if user.is_deleted or user.is_frozen or user.is_active is False:
+            record_login_failure(rate_key)
             flash("Your account is inactive. Please contact admin.", "danger")
             return render_template("auth/login.html")
 
+        clear_login_failures(rate_key)
         token = create_token(user)
         next_url = request.args.get("next") or url_for("admin.panel" if user.is_admin else "main.dashboard")
         response = make_response(redirect(next_url))
-        response.set_cookie("ziptask_token", token, httponly=True, samesite="Lax", max_age=7 * 24 * 60 * 60)
+        response.set_cookie(
+            current_app.config["JWT_COOKIE_NAME"],
+            token,
+            httponly=True,
+            secure=current_app.config["COOKIE_SECURE"],
+            samesite="Lax",
+            max_age=7 * 24 * 60 * 60,
+        )
         flash("Login successful", "success")
         return response
 
@@ -134,7 +187,7 @@ def reset_password(token):
 
 @auth_bp.route("/logout", methods=["POST"])
 def logout():
-    response = make_response(redirect(url_for("main.home")))
-    response.delete_cookie("ziptask_token")
+    response = make_response(redirect(url_for("auth.login")))
+    response.delete_cookie(current_app.config["JWT_COOKIE_NAME"])
     flash("Logged out successfully.", "success")
     return response

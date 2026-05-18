@@ -6,7 +6,6 @@ import smtplib
 from uuid import uuid4
 
 from flask import current_app, url_for
-from sqlalchemy.exc import IntegrityError
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from werkzeug.utils import secure_filename
 
@@ -48,7 +47,7 @@ def verify_password_reset_token(token: str, max_age_seconds: int = 1800) -> tupl
         return None, "Invalid reset token"
 
     user = User.query.get(data.get("user_id"))
-    if not user or user.email != data.get("email") or user.is_deleted or not user.is_active:
+    if not user or user.email != data.get("email") or user.is_deleted or not user.is_active or user.is_frozen:
         return None, "Invalid reset token"
     return user, None
 
@@ -171,7 +170,7 @@ def complete_external_payment(task: Task) -> None:
 
 
 def get_admin_user() -> User:
-    return User.query.filter_by(role="ADMIN").order_by(User.id.asc()).first()
+    return User.query.filter_by(role="ADMIN", is_deleted=False).order_by(User.id.asc()).first()
 
 
 def bootstrap_admin() -> None:
@@ -180,34 +179,36 @@ def bootstrap_admin() -> None:
     phone = current_app.config["DEFAULT_ADMIN_PHONE"].strip()
 
     if not email or not password or not phone:
-        raise RuntimeError(
-            "DEFAULT_ADMIN_EMAIL, DEFAULT_ADMIN_PASSWORD and DEFAULT_ADMIN_PHONE must be configured."
-        )
+        raise RuntimeError("DEFAULT_ADMIN_EMAIL, DEFAULT_ADMIN_PASSWORD and DEFAULT_ADMIN_PHONE must be configured.")
 
-    # 🔥 DELETE existing admin completely
     existing = User.query.filter_by(email=email).first()
     if existing:
-        db.session.delete(existing)
+        phone_owner = User.query.filter(User.phone == phone, User.id != existing.id).first()
+        if phone_owner:
+            raise RuntimeError("DEFAULT_ADMIN_PHONE is already used by another user.")
+        existing.role = "ADMIN"
+        existing.phone = phone
+        existing.full_name = existing.full_name or "ZipTask Admin"
+        existing.is_active = True
+        existing.is_deleted = False
+        existing.is_frozen = False
+        existing.set_password(password)
+        ensure_wallet(existing)
         db.session.commit()
+        current_app.logger.info("Admin account verified: %s", email)
+        return
 
-    # 🔥 CREATE fresh admin
-    admin = User(
-        full_name="ZipTask Admin",
-        email=email,
-        phone=phone,
-        role="ADMIN",
-        is_active=True,
-        is_deleted=False,
-    )
+    phone_owner = User.query.filter_by(phone=phone).first()
+    if phone_owner:
+        raise RuntimeError("DEFAULT_ADMIN_PHONE is already used by another user.")
 
+    admin = User(full_name="ZipTask Admin", email=email, phone=phone, role="ADMIN", is_active=True, is_deleted=False)
     admin.set_password(password)
-
     db.session.add(admin)
     db.session.flush()
-
     ensure_wallet(admin)
-
     db.session.commit()
+    current_app.logger.info("Admin account created: %s", email)
 
 
 def record_transaction(user_id: int, amount, txn_type: str, status: str = "SUCCESS", task_id: int | None = None, reference: str | None = None) -> Transaction:

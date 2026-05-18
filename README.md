@@ -203,7 +203,22 @@ python -m flask db upgrade
 python -m flask bootstrap-admin
 ```
 
-The app also attempts admin bootstrap on startup after the database exists.
+The app uses Flask-Migrate for schema changes. Do not rely on startup `create_all()` in production. The app also verifies the admin account on startup only after the `users` table exists.
+
+### Database and Auth Reliability
+
+ZipTask now includes:
+
+- Normalized `DATABASE_URL` handling for Render `postgres://` URLs.
+- SQLAlchemy connection pooling with `pool_pre_ping` and recycle settings.
+- `/health` endpoint that checks database connectivity with `SELECT 1`.
+- Idempotent admin bootstrap that does not delete existing admin records.
+- JWT auth stored in an HTTP-only cookie.
+- Expired/invalid auth cookies are cleared automatically.
+- Protected routes redirect to `/auth/login`.
+- Duplicate users are blocked by database constraints and backend checks.
+- Login attempt rate limiting is enabled in-process.
+- Database errors are logged and rolled back safely.
 
 ### 5. Run the app
 
@@ -296,10 +311,14 @@ gunicorn run:app
 Set:
 
 ```env
+FLASK_ENV=production
 FLASK_APP=run.py
 SECRET_KEY=your-production-secret
 JWT_SECRET_KEY=your-production-jwt-secret
 DATABASE_URL=your-render-postgresql-internal-url
+COOKIE_SECURE=true
+DB_POOL_SIZE=5
+DB_MAX_OVERFLOW=10
 DEFAULT_ADMIN_EMAIL=your-admin-email
 DEFAULT_ADMIN_PASSWORD=your-strong-admin-password
 DEFAULT_ADMIN_PHONE=9110766718
@@ -313,6 +332,26 @@ MAIL_USE_TLS=true
 ```
 
 Render sometimes provides PostgreSQL URLs starting with `postgres://`. ZipTask automatically converts this to SQLAlchemy's required `postgresql://` format, so login and database access work correctly after deployment.
+
+### Production deploy commands
+
+Build command:
+
+```bash
+pip install -r requirements.txt && python -m flask db upgrade && python -m flask bootstrap-admin
+```
+
+Start command:
+
+```bash
+gunicorn run:app
+```
+
+Health check path:
+
+```text
+/health
+```
 
 ## Payment Flow
 
