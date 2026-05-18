@@ -1,8 +1,6 @@
-import hmac
-import hashlib
+import razorpay
 from decimal import Decimal
 
-import razorpay
 from flask import Blueprint, current_app, flash, g, jsonify, render_template, request
 
 from .auth_utils import login_required
@@ -24,7 +22,7 @@ def razorpay_client():
     return razorpay.Client(auth=(key_id, key_secret))
 
 
-# ✅ Wallet page
+# ✅ Wallet page (FINAL FIXED)
 @wallet_bp.route("/")
 @login_required
 def wallet():
@@ -34,10 +32,16 @@ def wallet():
         .all()
     )
 
+    # 🔥 VERY IMPORTANT
+    razorpay_key_id = current_app.config.get("RAZORPAY_KEY_ID")
+
+    # DEBUG (check once in logs)
+    print("RAZORPAY KEY SENT:", razorpay_key_id)
+
     return render_template(
         "wallet/index.html",
         transactions=transactions,
-        razorpay_key_id=current_app.config.get("RAZORPAY_KEY_ID"),
+        razorpay_key_id=razorpay_key_id
     )
 
 
@@ -55,11 +59,11 @@ def create_order():
 
     client = razorpay_client()
     if not client:
-        return jsonify({"error": "Razorpay not configured"}), 500
+        return jsonify({"error": "Razorpay key is not configured"}), 500
 
     try:
         order = client.order.create({
-            "amount": int(amount * Decimal("100")),  # convert to paise
+            "amount": int(amount * Decimal("100")),  # ₹ → paise
             "currency": "INR",
             "payment_capture": 1,
             "notes": {
@@ -96,12 +100,11 @@ def verify_payment():
     if not all([order_id, payment_id, signature]):
         return jsonify({"error": "Invalid payment data"}), 400
 
-    # Find pending transaction
     pending = Transaction.query.filter_by(
         user_id=g.current_user.id,
         reference=order_id,
         type="WALLET_TOPUP_INITIATED",
-        status="PENDING",
+        status="PENDING"
     ).first()
 
     if not pending:
@@ -109,12 +112,14 @@ def verify_payment():
 
     amount = money(pending.amount)
 
-    # ✅ Verify signature (secure)
+    client = razorpay_client()
+
+    # ✅ Verify signature (official method)
     try:
-        razorpay_client().utility.verify_payment_signature({
+        client.utility.verify_payment_signature({
             "razorpay_order_id": order_id,
             "razorpay_payment_id": payment_id,
-            "razorpay_signature": signature,
+            "razorpay_signature": signature
         })
     except Exception:
         pending.status = "FAILED"
@@ -137,13 +142,12 @@ def verify_payment():
     if existing:
         return jsonify({"message": "Already credited"})
 
-    # ✅ Add money to wallet
+    # ✅ Credit wallet
     g.current_user.wallet.balance += amount
 
     if g.current_user.wallet.balance >= 0:
         g.current_user.has_pending_dues = False
 
-    # Update transaction
     pending.status = "SUCCESS"
 
     record_transaction(
