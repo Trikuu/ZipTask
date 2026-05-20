@@ -66,7 +66,7 @@
 <!-- ✅ Razorpay Script -->
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 
-<!-- ✅ PAYMENT SCRIPT -->
+<!-- ✅ PAYMENT SCRIPT (FINAL FIXED) -->
 <script>
 document.getElementById("walletTopupForm").addEventListener("submit", async function(e) {
     e.preventDefault();
@@ -76,6 +76,11 @@ document.getElementById("walletTopupForm").addEventListener("submit", async func
 
     if (!amount || amount <= 0) {
         alert("Enter valid amount");
+        return;
+    }
+
+    if (!key) {
+        alert("Razorpay key not loaded");
         return;
     }
 
@@ -96,7 +101,7 @@ document.getElementById("walletTopupForm").addEventListener("submit", async func
             return;
         }
 
-        // 🔥 STEP 2: Open Razorpay
+        // 🔥 STEP 2: Razorpay options (FIXED)
         const options = {
             key: key,
             amount: order.amount,
@@ -104,6 +109,17 @@ document.getElementById("walletTopupForm").addEventListener("submit", async func
             name: "ZipTask",
             description: "Wallet Topup",
             order_id: order.id,
+
+            // ✅ FORCE PROPER TEST CHECKOUT FLOW
+            config: {
+                display: {
+                    blocks: {},
+                    sequence: ["block"],
+                    preferences: {
+                        show_default_blocks: true
+                    }
+                }
+            },
 
             handler: async function (response) {
                 // 🔥 STEP 3: Verify payment
@@ -117,10 +133,14 @@ document.getElementById("walletTopupForm").addEventListener("submit", async func
 
                 const data = await verifyRes.json();
 
-                alert(data.message || "Payment completed");
-
-                // 🔥 Refresh page to update balance
+                alert(data.message || "Payment successful");
                 location.reload();
+            },
+
+            modal: {
+                ondismiss: function () {
+                    console.log("Payment popup closed");
+                }
             }
         };
 
