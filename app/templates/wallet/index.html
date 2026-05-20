@@ -27,7 +27,6 @@
                 <div class="panel mt-4">
                     <h2 class="h5 fw-bold mb-3">Add Money</h2>
 
-                    <!-- ✅ FORM -->
                     <form id="walletTopupForm" data-key="{{ razorpay_key_id }}">
                         <label class="form-label">Amount in INR</label>
                         <input id="amount" class="form-control mb-3" type="number" name="amount" min="1" step="0.01" required>
@@ -63,10 +62,9 @@
     </div>
 </section>
 
-<!-- ✅ Razorpay Script -->
+<!-- Razorpay Script -->
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 
-<!-- ✅ PAYMENT SCRIPT (FINAL FIXED) -->
 <script>
 document.getElementById("walletTopupForm").addEventListener("submit", async function(e) {
     e.preventDefault();
@@ -85,7 +83,6 @@ document.getElementById("walletTopupForm").addEventListener("submit", async func
     }
 
     try {
-        // 🔥 STEP 1: Create order
         const res = await fetch("/wallet/create-order", {
             method: "POST",
             headers: {
@@ -101,7 +98,6 @@ document.getElementById("walletTopupForm").addEventListener("submit", async func
             return;
         }
 
-        // 🔥 STEP 2: Razorpay options (FIXED)
         const options = {
             key: key,
             amount: order.amount,
@@ -110,19 +106,15 @@ document.getElementById("walletTopupForm").addEventListener("submit", async func
             description: "Wallet Topup",
             order_id: order.id,
 
-            // ✅ FORCE PROPER TEST CHECKOUT FLOW
-            config: {
-                display: {
-                    blocks: {},
-                    sequence: ["block"],
-                    preferences: {
-                        show_default_blocks: true
-                    }
-                }
+            // 🔥 FINAL FIX (IMPORTANT)
+            method: {
+                card: true,
+                upi: true,
+                netbanking: true,
+                wallet: true
             },
 
             handler: async function (response) {
-                // 🔥 STEP 3: Verify payment
                 const verifyRes = await fetch("/wallet/verify-payment", {
                     method: "POST",
                     headers: {
@@ -139,7 +131,7 @@ document.getElementById("walletTopupForm").addEventListener("submit", async func
 
             modal: {
                 ondismiss: function () {
-                    console.log("Payment popup closed");
+                    console.log("Payment cancelled");
                 }
             }
         };
